@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { GitPullRequest, Medal, Star, Target, Users } from 'lucide-react';
-import { useGame } from '../models/GameContext.jsx';
 import { players, recentAchievements } from '../models/mockData.js';
 import MetricCard from '../components/prototype/MetricCard.jsx';
 import StatusPill from '../components/prototype/StatusPill.jsx';
@@ -10,16 +9,25 @@ import { Button } from '../components/ui/button.jsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Progress } from '../components/ui/progress.jsx';
 
-export default function QuestDashboardView() {
+export default function QuestDashboardView({
+  quest,
+  hero,
+  onSync,
+  syncStatus,
+  onSelectPlayer,
+  isLoading,
+  errorMessage,
+  onOpenQuest,
+  onOpenLeaderboard,
+}) {
   // to do(graded): add group self-reflections (role separation + work balance) in your final report/docs.
-  const { questGoalPRs, questDeadline, stats, sync, status, setSelectedPlayer, loadingStats, statsError, setStep } = useGame();
 
   const progress = useMemo(() => {
-    const goal = Math.max(1, Number(questGoalPRs ?? 1));
-    const merged = Number(stats.mergedPRs ?? 0);
+    const goal = Math.max(1, Number(quest.targetMergedPRs ?? 1));
+    const merged = Number(hero.mergedPRs ?? 0);
     const pct = Math.min(100, Math.max(0, Math.round((merged / goal) * 100)));
     return { goal, merged, pct };
-  }, [questGoalPRs, stats.mergedPRs]);
+  }, [quest.targetMergedPRs, hero.mergedPRs]);
 
   const topPlayers = useMemo(() => players.slice(0, 4), []);
 
@@ -33,15 +41,15 @@ export default function QuestDashboardView() {
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-          {loadingStats ? 'Syncing...' : 'Last synced: just now'}
+          {isLoading ? 'Syncing...' : 'Last synced: just now'}
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Team XP" value={stats.xp} subtitle="+0 since last sync" icon={Star} />
+        <MetricCard title="Team XP" value={hero.xp} subtitle="+0 since last sync" icon={Star} />
         <MetricCard title="Active Members" value="6" subtitle="All contributors mapped" icon={Users} />
         <MetricCard title="Open Quests" value="2" subtitle="1 nearing completion" icon={Target} />
-        <MetricCard title="Merged PRs This Week" value={stats.mergedPRs} subtitle="+0 from yesterday" icon={GitPullRequest} />
+        <MetricCard title="Merged PRs This Week" value={hero.mergedPRs} subtitle="+0 from yesterday" icon={GitPullRequest} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
@@ -49,13 +57,13 @@ export default function QuestDashboardView() {
           <CardHeader className="flex flex-row items-start justify-between space-y-0">
             <div>
               <Badge className="rounded-full bg-violet-100 text-violet-700 hover:bg-violet-100">Active quest</Badge>
-              <CardTitle className="mt-4 text-2xl">{`Reach ${questGoalPRs} merged PRs before Friday`}</CardTitle>
+              <CardTitle className="mt-4 text-2xl">{quest.title}</CardTitle>
               <CardDescription className="mt-2">
                 Push the onboarding flow and polish leaderboard interactions before the weekly review.
               </CardDescription>
             </div>
             <Button
-              onClick={() => setStep('quests')}
+              onClick={onOpenQuest}
               variant="outline"
               className="rounded-2xl border-slate-200"
             >
@@ -68,7 +76,7 @@ export default function QuestDashboardView() {
               <span>
                 Current progress: <span className="font-semibold text-slate-900">{progress.merged} / {progress.goal} merged PRs</span>
               </span>
-              <span>Deadline: {questDeadline || 'Not set'}</span>
+              <span>Deadline: {quest.deadline || 'Not set'}</span>
             </div>
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 p-4">
@@ -113,17 +121,17 @@ export default function QuestDashboardView() {
               <CardDescription>Waiting states and feedback should always be visible.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <StatusPill status={status} />
+              <StatusPill status={syncStatus} />
               {/* to do(graded): when integrating Firebase, persist and show real-time leaderboard/quest updates after sync. */}
-              {statsError && <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 border border-rose-200">{statsError}</div>}
+              {errorMessage && <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 border border-rose-200">{errorMessage}</div>}
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
                 The last successful sync updated XP and quest progress without losing previous data.
               </div>
               <Button
-                onClick={sync}
+                onClick={onSync}
                 variant="outline"
                 className="w-full rounded-2xl border-slate-200"
-                disabled={status === 'syncing'}
+                disabled={isLoading}
               >
                 Retry sync
               </Button>
@@ -139,7 +147,7 @@ export default function QuestDashboardView() {
               <CardTitle>Top contributors</CardTitle>
               <CardDescription>Transparent ranking preview</CardDescription>
             </div>
-            <Button onClick={() => setStep('leaderboard')} variant="ghost" className="rounded-2xl">
+            <Button onClick={onOpenLeaderboard} variant="ghost" className="rounded-2xl">
               Open leaderboard
             </Button>
           </CardHeader>
@@ -147,7 +155,7 @@ export default function QuestDashboardView() {
             {topPlayers.map((player, index) => (
               <button
                 key={player.id}
-                onClick={() => setSelectedPlayer(player)}
+                onClick={() => onSelectPlayer?.(player)}
                 className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:bg-slate-50"
               >
                 <div className="flex items-center gap-4">
@@ -178,8 +186,8 @@ export default function QuestDashboardView() {
           </CardHeader>
           <CardContent className="space-y-4">
             {[
-              { label: 'Commits', value: stats.commits, width: '74%' },
-              { label: 'Merged PRs', value: stats.mergedPRs, width: '61%' },
+              { label: 'Commits', value: hero.commits, width: '74%' },
+              { label: 'Merged PRs', value: hero.mergedPRs, width: '61%' },
               { label: 'Reviews', value: '22', width: '42%' },
             ].map((item) => (
               <div key={item.label}>

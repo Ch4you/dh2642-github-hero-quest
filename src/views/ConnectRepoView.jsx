@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Button } from '../components/ui/button.jsx';
-import { useGame } from '../models/GameContext.jsx';
 import { repoHistory } from '../models/mockData.js';
 import { Input } from '../components/ui/input.jsx';
 
@@ -19,15 +18,13 @@ function parseRepo(input) {
   return { owner: '', name: '' };
 }
 
-export default function ConnectRepoView() {
-  const { setRepoSafe, setStep } = useGame();
+export default function ConnectRepoView({ onConnectRepository }) {
   const [value, setValue] = useState('https://github.com/kth-media-lab/github-hero-quest');
 
   function onConnect() {
     const { owner, name } = parseRepo(value);
     if (!owner || !name) return;
-    setRepoSafe({ owner, name });
-    setStep('dashboard');
+    onConnectRepository?.({ owner, name });
   }
 
   return (

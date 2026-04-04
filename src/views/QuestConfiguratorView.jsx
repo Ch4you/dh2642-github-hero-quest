@@ -5,13 +5,16 @@ import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Badge } from '../components/ui/badge.jsx';
 import { Progress } from '../components/ui/progress.jsx';
-import { useGame } from '../models/GameContext.jsx';
 
-export default function QuestConfiguratorView() {
-  const { questGoalPRs, questDeadline, updateQuest, stats, setStep } = useGame();
-  const [title, setTitle] = useState('Reach 12 merged PRs before Friday');
-  const [target, setTarget] = useState(String(questGoalPRs ?? 12));
-  const [deadline, setDeadline] = useState(questDeadline ?? '');
+export default function QuestConfiguratorView({
+  quest,
+  hero,
+  onSaveQuest,
+  onBackDashboard,
+}) {
+  const [title, setTitle] = useState(quest.title);
+  const [target, setTarget] = useState(String(quest.targetMergedPRs ?? 12));
+  const [deadline, setDeadline] = useState(quest.deadline ?? '');
 
   const normalized = useMemo(() => {
     const n = Number(target);
@@ -19,16 +22,19 @@ export default function QuestConfiguratorView() {
   }, [target]);
 
   const preview = useMemo(() => {
-    const goal = Math.max(1, Number(normalized ?? questGoalPRs ?? 1));
-    const merged = Number(stats.mergedPRs ?? 0);
+    const goal = Math.max(1, Number(normalized ?? quest.targetMergedPRs ?? 1));
+    const merged = Number(hero.mergedPRs ?? 0);
     const pct = Math.min(100, Math.max(0, Math.round((merged / goal) * 100)));
     return { goal, merged, pct };
-  }, [normalized, questGoalPRs, stats.mergedPRs]);
+  }, [normalized, quest.targetMergedPRs, hero.mergedPRs]);
 
   function onSave() {
     // to do(graded): persist quest settings to Firebase so all users see updates in real-time.
-    updateQuest({ goalPRs: normalized ?? questGoalPRs, deadline });
-    setStep('dashboard');
+    onSaveQuest?.({
+      title,
+      targetMergedPRs: normalized ?? quest.targetMergedPRs,
+      deadline,
+    });
   }
 
   return (
@@ -72,10 +78,10 @@ export default function QuestConfiguratorView() {
             <Button onClick={onSave} className="rounded-2xl bg-slate-900 text-white hover:bg-slate-800">
               <Plus className="mr-2 h-4 w-4" /> Save quest
             </Button>
-            <Button variant="outline" className="rounded-2xl border-slate-200" onClick={() => setStep('dashboard')}>
+            <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onBackDashboard}>
               Save draft
             </Button>
-            <Button variant="ghost" className="rounded-2xl" onClick={() => setStep('dashboard')}>
+            <Button variant="ghost" className="rounded-2xl" onClick={onBackDashboard}>
               Cancel
             </Button>
           </div>

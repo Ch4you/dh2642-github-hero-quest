@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
-import { useGame } from '../models/GameContext.jsx';
 import { players } from '../models/mockData.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs.jsx';
 import { Avatar, AvatarFallback } from '../components/ui/avatar.jsx';
 
-export default function LeaderboardView() {
-  const { setSelectedPlayer, repo } = useGame();
+export default function LeaderboardView({ repo, onSelectPlayer, rows = players }) {
   const [filter, setFilter] = useState('This week');
 
   // to do(graded): replace mock players with Firebase live leaderboard (real-time updates).
-  const orderedPlayers = useMemo(() => players, []);
+  const orderedPlayers = useMemo(() => rows, [rows]);
 
   return (
     <div className="space-y-6">
@@ -57,7 +55,7 @@ export default function LeaderboardView() {
             {orderedPlayers.map((player, index) => (
               <button
                 key={player.id}
-                onClick={() => setSelectedPlayer(player)}
+                onClick={() => onSelectPlayer?.(player)}
                 className={`grid w-full gap-3 rounded-2xl border px-4 py-4 text-left transition hover:bg-slate-50 md:grid-cols-[72px_1.4fr_0.8fr_0.8fr_0.8fr_0.8fr] ${
                   index === 0 ? 'border-violet-200 bg-violet-50/50' : 'border-slate-200 bg-white'
                 }`}

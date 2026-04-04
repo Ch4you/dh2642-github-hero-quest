@@ -1,13 +1,10 @@
 import { motion } from 'framer-motion';
 import { CheckCircle2, Trophy } from 'lucide-react';
-import { useGame } from '../models/GameContext.jsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
 
-export default function LandingView() {
-  const { setStep } = useGame();
-
+export default function LandingView({ onContinue }) {
   // to do(graded): document target group, use case, and usability feedback sessions.
 
   return (
@@ -45,7 +42,7 @@ export default function LandingView() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button
-                onClick={() => setStep('setup')}
+                onClick={onContinue}
                 className="h-12 w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
               >
                 <Trophy className="mr-2 h-4 w-4" /> Sign in with Google

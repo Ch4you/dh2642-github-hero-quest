@@ -1,9 +1,9 @@
-import { useGame } from '../models/GameContext.jsx';
 import StatusPill from '../components/prototype/StatusPill.jsx';
 import { Bell, Medal, RefreshCw, Settings, Target, Trophy } from 'lucide-react';
 import { Button } from '../components/ui/button.jsx';
 import { Avatar, AvatarFallback } from '../components/ui/avatar.jsx';
 import { cn } from '../components/ui/utils.js';
+import { LoadingSpinner } from '../components/ui/loading-spinner.jsx';
 
 const nav = [
   { key: 'dashboard', label: 'Dashboard', Icon: Trophy, step: 'dashboard' },
@@ -28,9 +28,15 @@ function NavItem({ active, Icon, label, onClick }) {
   );
 }
 
-export default function AppShell({ current = 'dashboard', children }) {
-  const { repo, step, setStep, sync, status } = useGame();
-
+export default function AppShell({
+  current = 'dashboard',
+  children,
+  repo,
+  onNavigate,
+  onSync,
+  syncStatus,
+  isLoading,
+}) {
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex">
@@ -52,7 +58,7 @@ export default function AppShell({ current = 'dashboard', children }) {
                 active={current === item.key}
                 Icon={item.Icon}
                 label={item.label}
-                onClick={() => setStep(item.step)}
+                onClick={() => onNavigate?.(item.step)}
               />
             ))}
           </div>
@@ -73,9 +79,14 @@ export default function AppShell({ current = 'dashboard', children }) {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <StatusPill status={status} />
-                <Button onClick={sync} variant="outline" className="rounded-2xl border-slate-200 bg-white" disabled={status === 'syncing'}>
-                  <RefreshCw className={status === 'syncing' ? 'mr-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4'} /> Sync
+                <StatusPill status={syncStatus} />
+                <Button
+                  onClick={onSync}
+                  variant="outline"
+                  className="rounded-2xl border-slate-200 bg-white"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <LoadingSpinner className="h-4 w-4" label="Syncing" /> : <><RefreshCw className="mr-2 h-4 w-4" /> Sync</>}
                 </Button>
                 <Button variant="outline" size="icon" className="rounded-2xl border-slate-200 bg-white" type="button">
                   <Bell className="h-4 w-4" />
