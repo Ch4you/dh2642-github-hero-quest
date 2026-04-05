@@ -1,13 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { players } from '../models/mockData.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs.jsx';
 import { Avatar, AvatarFallback } from '../components/ui/avatar.jsx';
 
-export default function LeaderboardView({ repo, onSelectPlayer, rows = players }) {
-  const [filter, setFilter] = useState('This week');
+export default function LeaderboardView({
+  repo,
+  onSelectPlayer,
+  rows = [],
+  filter,
+  onFilterChange,
+}) {
 
   // to do(graded): replace mock players with Firebase live leaderboard (real-time updates).
   const orderedPlayers = useMemo(() => rows, [rows]);
@@ -24,7 +28,7 @@ export default function LeaderboardView({ repo, onSelectPlayer, rows = players }
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input placeholder="Search player" className="h-11 w-56 rounded-2xl pl-9" />
           </div>
-          <Tabs value={filter} onValueChange={setFilter}>
+          <Tabs value={filter} onValueChange={onFilterChange}>
             <TabsList className="rounded-2xl bg-white p-1 shadow-sm">
               <TabsTrigger value="This week" className="rounded-xl">
                 This week

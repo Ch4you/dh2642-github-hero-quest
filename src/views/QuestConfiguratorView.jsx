@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Button } from '../components/ui/button.jsx';
@@ -7,32 +7,34 @@ import { Badge } from '../components/ui/badge.jsx';
 import { Progress } from '../components/ui/progress.jsx';
 
 export default function QuestConfiguratorView({
-  quest,
+  title,
+  target,
+  deadline,
   hero,
+  onTitleChange,
+  onTargetChange,
+  onDeadlineChange,
+  targetMergedPRsBase,
   onSaveQuest,
   onBackDashboard,
 }) {
-  const [title, setTitle] = useState(quest.title);
-  const [target, setTarget] = useState(String(quest.targetMergedPRs ?? 12));
-  const [deadline, setDeadline] = useState(quest.deadline ?? '');
-
   const normalized = useMemo(() => {
     const n = Number(target);
     return Number.isFinite(n) ? n : null;
   }, [target]);
 
   const preview = useMemo(() => {
-    const goal = Math.max(1, Number(normalized ?? quest.targetMergedPRs ?? 1));
+    const goal = Math.max(1, Number(normalized ?? targetMergedPRsBase ?? 1));
     const merged = Number(hero.mergedPRs ?? 0);
     const pct = Math.min(100, Math.max(0, Math.round((merged / goal) * 100)));
     return { goal, merged, pct };
-  }, [normalized, quest.targetMergedPRs, hero.mergedPRs]);
+  }, [normalized, targetMergedPRsBase, hero.mergedPRs]);
 
   function onSave() {
     // to do(graded): persist quest settings to Firebase so all users see updates in real-time.
     onSaveQuest?.({
       title,
-      targetMergedPRs: normalized ?? quest.targetMergedPRs,
+      targetMergedPRs: normalized ?? targetMergedPRsBase,
       deadline,
     });
   }
@@ -47,7 +49,7 @@ export default function QuestConfiguratorView({
         <CardContent className="space-y-5">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">Quest title</label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-12 rounded-2xl" />
+            <Input value={title} onChange={(e) => onTitleChange?.(e.target.value)} className="h-12 rounded-2xl" />
           </div>
 
           <div className="space-y-2">
@@ -65,13 +67,13 @@ export default function QuestConfiguratorView({
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Target value</label>
-              <Input value={target} onChange={(e) => setTarget(e.target.value)} className="h-12 rounded-2xl" />
+              <Input value={target} onChange={(e) => onTargetChange?.(e.target.value)} className="h-12 rounded-2xl" />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">Deadline</label>
-            <Input type="date" className="h-12 rounded-2xl" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+            <Input type="date" className="h-12 rounded-2xl" value={deadline} onChange={(e) => onDeadlineChange?.(e.target.value)} />
           </div>
 
           <div className="flex flex-wrap gap-3">

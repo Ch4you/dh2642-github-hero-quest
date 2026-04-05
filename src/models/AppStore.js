@@ -2,7 +2,6 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import { HeroModel } from './HeroModel.js';
 import { QuestModel } from './QuestModel.js';
 import { getRepoStats } from '../services/githubApi.js';
-import { players } from './mockData.js';
 
 export class AppStore {
   step = 'login';
@@ -20,7 +19,7 @@ export class AppStore {
   });
 
   selectedPlayer = null;
-  leaderboard = players;
+  leaderboard = [];
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

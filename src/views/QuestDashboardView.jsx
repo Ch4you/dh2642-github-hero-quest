@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { GitPullRequest, Medal, Star, Target, Users } from 'lucide-react';
-import { players, recentAchievements } from '../models/mockData.js';
 import MetricCard from '../components/prototype/MetricCard.jsx';
 import StatusPill from '../components/prototype/StatusPill.jsx';
 import { Badge } from '../components/ui/badge.jsx';
@@ -19,6 +18,8 @@ export default function QuestDashboardView({
   errorMessage,
   onOpenQuest,
   onOpenLeaderboard,
+  contributors = [],
+  achievements = [],
 }) {
   // to do(graded): add group self-reflections (role separation + work balance) in your final report/docs.
 
@@ -29,7 +30,7 @@ export default function QuestDashboardView({
     return { goal, merged, pct };
   }, [quest.targetMergedPRs, hero.mergedPRs]);
 
-  const topPlayers = useMemo(() => players.slice(0, 4), []);
+  const topPlayers = useMemo(() => contributors.slice(0, 4), [contributors]);
 
   return (
     <div className="space-y-6">
@@ -101,7 +102,7 @@ export default function QuestDashboardView({
               <CardTitle>Recent achievements</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {recentAchievements.map((item) => (
+              {achievements.map((item) => (
                 <div key={item.title} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
                   <div className="rounded-xl bg-white p-2 shadow-sm">
                     {item.type === 'badge' ? <Medal className="h-4 w-4" /> : item.type === 'quest' ? <Target className="h-4 w-4" /> : <Star className="h-4 w-4" />}
