@@ -16,6 +16,7 @@ export default function QuestConfiguratorView({
   onDeadlineChange,
   targetMergedPRsBase,
   onSaveQuest,
+  onSaveDraft,
   onBackDashboard,
 }) {
   const normalized = useMemo(() => {
@@ -80,7 +81,7 @@ export default function QuestConfiguratorView({
             <Button onClick={onSave} className="rounded-2xl bg-slate-900 text-white hover:bg-slate-800">
               <Plus className="mr-2 h-4 w-4" /> Save quest
             </Button>
-            <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onBackDashboard}>
+            <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onSaveDraft}>
               Save draft
             </Button>
             <Button variant="ghost" className="rounded-2xl" onClick={onBackDashboard}>

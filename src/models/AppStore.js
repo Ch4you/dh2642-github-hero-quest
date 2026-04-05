@@ -17,6 +17,7 @@ export class AppStore {
     targetMergedPRs: 12,
     deadline: '',
   });
+  questDraft = null;
 
   selectedPlayer = null;
   leaderboard = [];
@@ -45,6 +46,15 @@ export class AppStore {
       targetMergedPRs: Number.isFinite(targetMergedPRs) ? targetMergedPRs : this.quest.targetMergedPRs,
       deadline: deadline ?? this.quest.deadline,
     });
+    this.questDraft = null;
+  }
+
+  saveQuestDraft({ title, targetMergedPRs, deadline }) {
+    this.questDraft = {
+      title: title ?? this.quest.title,
+      targetMergedPRs: Number.isFinite(targetMergedPRs) ? targetMergedPRs : this.quest.targetMergedPRs,
+      deadline: deadline ?? this.quest.deadline,
+    };
   }
 
   selectPlayer(player) {

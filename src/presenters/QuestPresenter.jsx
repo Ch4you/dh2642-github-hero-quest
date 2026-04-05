@@ -6,9 +6,19 @@ import QuestConfiguratorView from '../views/QuestConfiguratorView.jsx';
 
 const QuestPresenter = observer(function QuestPresenter() {
   const store = useStore();
-  const [title, setTitle] = useState(store.quest.title);
-  const [target, setTarget] = useState(String(store.quest.targetMergedPRs ?? 12));
-  const [deadline, setDeadline] = useState(store.quest.deadline ?? '');
+  const seed = store.questDraft ?? store.quest;
+  const [title, setTitle] = useState(seed.title);
+  const [target, setTarget] = useState(String(seed.targetMergedPRs ?? 12));
+  const [deadline, setDeadline] = useState(seed.deadline ?? '');
+
+  function buildPayload() {
+    const parsedTarget = Number(target);
+    return {
+      title,
+      targetMergedPRs: Number.isFinite(parsedTarget) ? parsedTarget : store.quest.targetMergedPRs,
+      deadline,
+    };
+  }
 
   return (
     <ShellPresenter current="quests">
@@ -21,8 +31,12 @@ const QuestPresenter = observer(function QuestPresenter() {
         onTargetChange={setTarget}
         onDeadlineChange={setDeadline}
         targetMergedPRsBase={store.quest.targetMergedPRs}
-        onSaveQuest={(payload) => {
-          store.updateQuest(payload);
+        onSaveQuest={() => {
+          store.updateQuest(buildPayload());
+          store.setStep('dashboard');
+        }}
+        onSaveDraft={() => {
+          store.saveQuestDraft(buildPayload());
           store.setStep('dashboard');
         }}
         onBackDashboard={() => store.setStep('dashboard')}

@@ -11,6 +11,8 @@ export default function LeaderboardView({
   rows = [],
   filter,
   onFilterChange,
+  searchQuery,
+  onSearchQueryChange,
 }) {
 
   // to do(graded): replace mock players with Firebase live leaderboard (real-time updates).
@@ -26,7 +28,12 @@ export default function LeaderboardView({
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input placeholder="Search player" className="h-11 w-56 rounded-2xl pl-9" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => onSearchQueryChange?.(e.target.value)}
+              placeholder="Search player"
+              className="h-11 w-56 rounded-2xl pl-9"
+            />
           </div>
           <Tabs value={filter} onValueChange={onFilterChange}>
             <TabsList className="rounded-2xl bg-white p-1 shadow-sm">
