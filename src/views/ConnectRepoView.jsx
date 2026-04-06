@@ -10,6 +10,7 @@ export default function ConnectRepoView({
   onUseSample,
   onOpenRecent,
   recentRepositories = [],
+  connectError,
 }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
@@ -23,6 +24,7 @@ export default function ConnectRepoView({
             <label className="text-sm font-medium text-slate-700">Repository URL</label>
             <Input value={repositoryInput} onChange={(e) => onRepositoryInputChange?.(e.target.value)} className="h-12 rounded-2xl" />
             <p className="text-sm text-slate-500">We validate the repository before adding it.</p>
+            {connectError && <p className="text-sm text-rose-600">{connectError}</p>}
           </div>
 
           <div className="flex flex-wrap gap-3">

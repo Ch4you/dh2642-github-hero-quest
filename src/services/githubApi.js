@@ -1,30 +1,63 @@
-// to do(graded): implement robust GitHub API strategy (pagination/rate limits) and correct merged PR counting.
-// If you need stable counts without heavy requests, consider using dedicated endpoints or GraphQL.
 const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN;
 
-export async function getRepoStats(owner, repo) {
-  if (!owner || !repo) return { commits: 0, mergedPRs: 0, openPRs: 0 };
-
-  const headers = { Accept: 'application/vnd.github+json' };
+function getHeaders() {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+  };
   if (GITHUB_TOKEN) headers.Authorization = `Bearer ${GITHUB_TOKEN}`;
+  return headers;
+}
 
-  try {
-    const pullsUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls?state=open&per_page=100`;
-    const commitsUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`;
-
-    const [pullsRes, commitsRes] = await Promise.all([fetch(pullsUrl, { headers }), fetch(commitsUrl, { headers })]);
-    if (!pullsRes.ok) throw new Error(`GitHub pulls request failed: ${pullsRes.status}`);
-    if (!commitsRes.ok) throw new Error(`GitHub commits request failed: ${commitsRes.status}`);
-
-    const pulls = await pullsRes.json();
-    const openPRs = Array.isArray(pulls) ? pulls.length : 0;
-
-    const commitsJson = await commitsRes.json();
-    const commits = Array.isArray(commitsJson) ? commitsJson.length : 0;
-
-    return { commits, mergedPRs: 0, openPRs };
-  } catch {
-    return { commits: 0, mergedPRs: 0, openPRs: 0 };
+async function fetchJsonOrThrow(url) {
+  const response = await fetch(url, { headers: getHeaders() });
+  if (!response.ok) {
+    const rateHint = response.status === 403 ? ' (possible rate limit)' : '';
+    throw new Error(`GitHub API failed (${response.status})${rateHint}`);
   }
+  return response.json();
+}
+
+function parseLastPageFromLink(linkHeader) {
+  if (!linkHeader) return null;
+  const lastMatch = linkHeader.match(/<[^>]*[?&]page=(\d+)[^>]*>; rel="last"/);
+  if (!lastMatch) return null;
+  const page = Number(lastMatch[1]);
+  return Number.isFinite(page) ? page : null;
+}
+
+async function fetchCommitCount(owner, repo) {
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`;
+  const response = await fetch(url, { headers: getHeaders() });
+  if (!response.ok) {
+    const rateHint = response.status === 403 ? ' (possible rate limit)' : '';
+    throw new Error(`GitHub commits API failed (${response.status})${rateHint}`);
+  }
+  const linkHeader = response.headers.get('link');
+  const lastPage = parseLastPageFromLink(linkHeader);
+  if (lastPage) return lastPage;
+  const body = await response.json();
+  return Array.isArray(body) ? body.length : 0;
+}
+
+export async function getRepoStats(owner, repo) {
+  if (!owner || !repo) {
+    throw new Error('Repository owner/name is required before syncing.');
+  }
+
+  const repoQuery = `${owner}/${repo}`;
+  const mergedUrl = `https://api.github.com/search/issues?q=repo:${encodeURIComponent(repoQuery)}+is:pr+is:merged&per_page=1`;
+  const openUrl = `https://api.github.com/search/issues?q=repo:${encodeURIComponent(repoQuery)}+is:pr+is:open&per_page=1`;
+
+  const [mergedJson, openJson, commits] = await Promise.all([
+    fetchJsonOrThrow(mergedUrl),
+    fetchJsonOrThrow(openUrl),
+    fetchCommitCount(owner, repo),
+  ]);
+
+  return {
+    commits: Number(commits || 0),
+    mergedPRs: Number(mergedJson?.total_count ?? 0),
+    openPRs: Number(openJson?.total_count ?? 0),
+  };
 }
 

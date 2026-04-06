@@ -8,6 +8,7 @@ export class AppStore {
   syncStatus = 'synced';
   isLoading = false;
   errorMessage = '';
+  flashMessage = '';
 
   repo = { owner: '', name: '' };
   profile = { username: 'octo.team.member' };
@@ -21,6 +22,9 @@ export class AppStore {
 
   selectedPlayer = null;
   leaderboard = [];
+  notificationsOpen = false;
+  notifications = [];
+  nextNotificationId = 1;
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -36,8 +40,14 @@ export class AppStore {
 
   connectRepository({ owner, name }) {
     this.repo = { owner: owner ?? '', name: name ?? '' };
+    this.hero = new HeroModel();
+    this.selectedPlayer = null;
     this.errorMessage = '';
+    this.syncStatus = 'synced';
+    this.isLoading = false;
     this.step = 'dashboard';
+    this.addNotification(`Connected ${owner}/${name}`);
+    this.flashMessage = `Connected ${owner}/${name}`;
   }
 
   updateQuest({ title, targetMergedPRs, deadline }) {
@@ -55,6 +65,8 @@ export class AppStore {
       targetMergedPRs: Number.isFinite(targetMergedPRs) ? targetMergedPRs : this.quest.targetMergedPRs,
       deadline: deadline ?? this.quest.deadline,
     };
+    this.addNotification('Quest draft saved');
+    this.flashMessage = 'Quest draft saved';
   }
 
   selectPlayer(player) {
@@ -65,12 +77,40 @@ export class AppStore {
     this.selectedPlayer = null;
   }
 
+  toggleNotifications() {
+    this.notificationsOpen = !this.notificationsOpen;
+  }
+
+  closeNotifications() {
+    this.notificationsOpen = false;
+  }
+
+  clearFlashMessage() {
+    this.flashMessage = '';
+  }
+
+  addNotification(text) {
+    const item = {
+      id: this.nextNotificationId,
+      text,
+      time: new Date().toLocaleTimeString(),
+    };
+    this.nextNotificationId += 1;
+    this.notifications = [item, ...this.notifications].slice(0, 8);
+  }
+
   get questProgress() {
     return this.quest.progress(this.hero.mergedPRs);
   }
 
   async syncRepositoryData() {
-    if (!this.repo.owner || !this.repo.name) return;
+    if (!this.repo.owner || !this.repo.name) {
+      this.syncStatus = 'error';
+      this.errorMessage = 'Please connect a repository before syncing.';
+      this.addNotification('Sync failed: connect a repository first');
+      this.flashMessage = 'Please connect a repository before syncing.';
+      return;
+    }
 
     this.isLoading = true;
     this.syncStatus = 'syncing';
@@ -81,11 +121,14 @@ export class AppStore {
       runInAction(() => {
         this.hero = HeroModel.fromActivity(activity);
         this.syncStatus = 'synced';
+        this.errorMessage = '';
+        this.addNotification('Repository synced successfully');
       });
     } catch (error) {
       runInAction(() => {
         this.errorMessage = error?.message ?? 'Failed to sync repository activity.';
         this.syncStatus = 'error';
+        this.addNotification('Sync failed');
       });
     } finally {
       runInAction(() => {

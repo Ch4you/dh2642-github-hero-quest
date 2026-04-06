@@ -13,6 +13,12 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
       onSync={store.syncRepositoryData}
       syncStatus={store.syncStatus}
       isLoading={store.isLoading}
+      flashMessage={store.flashMessage}
+      onDismissFlashMessage={store.clearFlashMessage}
+      notifications={store.notifications}
+      notificationsOpen={store.notificationsOpen}
+      onToggleNotifications={store.toggleNotifications}
+      onCloseNotifications={store.closeNotifications}
     >
       {children}
     </AppShell>

@@ -36,6 +36,12 @@ export default function AppShell({
   onSync,
   syncStatus,
   isLoading,
+  flashMessage,
+  onDismissFlashMessage,
+  notifications,
+  notificationsOpen,
+  onToggleNotifications,
+  onCloseNotifications,
 }) {
   return (
     <div className="min-h-screen bg-slate-100">
@@ -88,7 +94,13 @@ export default function AppShell({
                 >
                   {isLoading ? <LoadingSpinner className="h-4 w-4" label="Syncing" /> : <><RefreshCw className="mr-2 h-4 w-4" /> Sync</>}
                 </Button>
-                <Button variant="outline" size="icon" className="rounded-2xl border-slate-200 bg-white" type="button">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-2xl border-slate-200 bg-white"
+                  type="button"
+                  onClick={onToggleNotifications}
+                >
                   <Bell className="h-4 w-4" />
                 </Button>
                 <Avatar className="h-10 w-10">
@@ -97,6 +109,40 @@ export default function AppShell({
               </div>
             </div>
           </header>
+
+          {flashMessage && (
+            <div className="mx-6 mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 lg:mx-8">
+              <div className="flex items-center justify-between gap-3">
+                <span>{flashMessage}</span>
+                <button type="button" className="text-emerald-700 underline" onClick={onDismissFlashMessage}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
+          {notificationsOpen && (
+            <div className="mx-6 mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:mx-8">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-semibold text-slate-900">Notifications</div>
+                <button type="button" className="text-sm text-slate-600 underline" onClick={onCloseNotifications}>
+                  Close
+                </button>
+              </div>
+              {notifications?.length ? (
+                <div className="space-y-2">
+                  {notifications.map((item) => (
+                    <div key={item.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                      <div>{item.text}</div>
+                      <div className="text-xs text-slate-500">{item.time}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">No notifications yet.</div>
+              )}
+            </div>
+          )}
 
           <div className="p-6 lg:p-8">{children}</div>
         </main>

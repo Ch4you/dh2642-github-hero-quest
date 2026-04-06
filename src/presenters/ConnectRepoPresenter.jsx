@@ -20,10 +20,15 @@ function parseRepository(input) {
 const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
   const store = useStore();
   const [repositoryInput, setRepositoryInput] = useState('https://github.com/kth-media-lab/github-hero-quest');
+  const [connectError, setConnectError] = useState('');
 
   function connect() {
     const parsed = parseRepository(repositoryInput);
-    if (!parsed.owner || !parsed.name) return;
+    if (!parsed.owner || !parsed.name) {
+      setConnectError('Invalid repository format. Use owner/repo or a GitHub URL.');
+      return;
+    }
+    setConnectError('');
     store.connectRepository(parsed);
   }
 
@@ -31,11 +36,21 @@ const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
     <ShellPresenter current="settings">
       <ConnectRepoView
         repositoryInput={repositoryInput}
-        onRepositoryInputChange={setRepositoryInput}
+        onRepositoryInputChange={(value) => {
+          setRepositoryInput(value);
+          if (connectError) setConnectError('');
+        }}
         onConnect={connect}
-        onUseSample={() => setRepositoryInput('https://github.com/kth-media-lab/github-hero-quest')}
-        onOpenRecent={(repoName) => setRepositoryInput(`https://github.com/${repoName}`)}
+        onUseSample={() => {
+          setRepositoryInput('https://github.com/kth-media-lab/github-hero-quest');
+          setConnectError('');
+        }}
+        onOpenRecent={(repoName) => {
+          setRepositoryInput(`https://github.com/${repoName}`);
+          setConnectError('');
+        }}
         recentRepositories={repoHistory}
+        connectError={connectError}
       />
     </ShellPresenter>
   );
