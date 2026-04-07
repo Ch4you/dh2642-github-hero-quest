@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import StatusPill from '../components/prototype/StatusPill.jsx';
 import { Bell, Medal, RefreshCw, Settings, Target, Trophy } from 'lucide-react';
 import { Button } from '../components/ui/button.jsx';
@@ -42,7 +43,41 @@ export default function AppShell({
   notificationsOpen,
   onToggleNotifications,
   onCloseNotifications,
+  onClearNotifications,
 }) {
+  const notificationsRef = useRef(null);
+  const bellButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!flashMessage) return undefined;
+    const timer = window.setTimeout(() => {
+      onDismissFlashMessage?.();
+    }, 4000);
+    return () => window.clearTimeout(timer);
+  }, [flashMessage, onDismissFlashMessage]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return undefined;
+
+    function onPointerDown(event) {
+      const target = event.target;
+      const clickedPanel = notificationsRef.current?.contains(target);
+      const clickedBell = bellButtonRef.current?.contains(target);
+      if (!clickedPanel && !clickedBell) onCloseNotifications?.();
+    }
+
+    function onKeyDown(event) {
+      if (event.key === 'Escape') onCloseNotifications?.();
+    }
+
+    window.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [notificationsOpen, onCloseNotifications]);
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex">
@@ -94,15 +129,17 @@ export default function AppShell({
                 >
                   {isLoading ? <LoadingSpinner className="h-4 w-4" label="Syncing" /> : <><RefreshCw className="mr-2 h-4 w-4" /> Sync</>}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-2xl border-slate-200 bg-white"
-                  type="button"
-                  onClick={onToggleNotifications}
-                >
-                  <Bell className="h-4 w-4" />
-                </Button>
+                <span ref={bellButtonRef}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-2xl border-slate-200 bg-white"
+                    type="button"
+                    onClick={onToggleNotifications}
+                  >
+                    <Bell className="h-4 w-4" />
+                  </Button>
+                </span>
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-slate-900 text-white">AL</AvatarFallback>
                 </Avatar>
@@ -122,12 +159,17 @@ export default function AppShell({
           )}
 
           {notificationsOpen && (
-            <div className="mx-6 mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:mx-8">
+            <div className="mx-6 mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:mx-8" ref={notificationsRef}>
               <div className="mb-3 flex items-center justify-between">
                 <div className="text-sm font-semibold text-slate-900">Notifications</div>
-                <button type="button" className="text-sm text-slate-600 underline" onClick={onCloseNotifications}>
-                  Close
-                </button>
+                <div className="flex items-center gap-3">
+                  <button type="button" className="text-sm text-slate-600 underline" onClick={onClearNotifications}>
+                    Clear all
+                  </button>
+                  <button type="button" className="text-sm text-slate-600 underline" onClick={onCloseNotifications}>
+                    Close
+                  </button>
+                </div>
               </div>
               {notifications?.length ? (
                 <div className="space-y-2">

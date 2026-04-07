@@ -60,7 +60,7 @@ export default function QuestDashboardView({
               <Badge className="rounded-full bg-violet-100 text-violet-700 hover:bg-violet-100">Active quest</Badge>
               <CardTitle className="mt-4 text-2xl">{quest.title}</CardTitle>
               <CardDescription className="mt-2">
-                Push the onboarding flow and polish leaderboard interactions before the weekly review.
+                {quest.description}
               </CardDescription>
             </div>
             <Button

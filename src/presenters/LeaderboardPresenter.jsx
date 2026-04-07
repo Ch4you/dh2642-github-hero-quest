@@ -10,17 +10,23 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
   const [filter, setFilter] = useState('This week');
   const [searchQuery, setSearchQuery] = useState('');
 
+  function getWeeklyScore(row) {
+    const weeklyXp = Number(row.weeklyXp);
+    if (Number.isFinite(weeklyXp)) return weeklyXp;
+
+    const commits = Number(row.commits ?? 0);
+    const merged = Number(row.mergedPRs ?? 0);
+    const reviews = Number(row.reviews ?? 0);
+    return commits * 5 + merged * 20 + reviews * 10;
+  }
+
   const sourceRows = store.leaderboard.length ? store.leaderboard : players;
   const rankedRows = useMemo(() => {
     const rows = [...sourceRows];
     if (filter === 'All time') {
       return rows.sort((a, b) => Number(b.xp ?? 0) - Number(a.xp ?? 0));
     }
-    return rows.sort((a, b) => {
-      const ta = Number(String(a.trend ?? '0').replace('+', '')) || 0;
-      const tb = Number(String(b.trend ?? '0').replace('+', '')) || 0;
-      return tb - ta;
-    });
+    return rows.sort((a, b) => getWeeklyScore(b) - getWeeklyScore(a));
   }, [sourceRows, filter]);
 
   const visibleRows = useMemo(() => {

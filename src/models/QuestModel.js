@@ -1,10 +1,12 @@
 export class QuestModel {
   constructor({
     title = 'Reach merged PR goal',
+    description = 'Push high-impact improvements before weekly review.',
     targetMergedPRs = 12,
     deadline = '',
   } = {}) {
     this.title = title;
+    this.description = description;
     this.targetMergedPRs = Number(targetMergedPRs || 12);
     this.deadline = deadline;
   }

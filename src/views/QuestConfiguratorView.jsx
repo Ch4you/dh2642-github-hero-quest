@@ -8,10 +8,12 @@ import { Progress } from '../components/ui/progress.jsx';
 
 export default function QuestConfiguratorView({
   title,
+  description,
   target,
   deadline,
   hero,
   onTitleChange,
+  onDescriptionChange,
   onTargetChange,
   onDeadlineChange,
   targetMergedPRsBase,
@@ -35,6 +37,7 @@ export default function QuestConfiguratorView({
     // to do(graded): persist quest settings to Firebase so all users see updates in real-time.
     onSaveQuest?.({
       title,
+      description,
       targetMergedPRs: normalized ?? targetMergedPRsBase,
       deadline,
     });
@@ -56,8 +59,9 @@ export default function QuestConfiguratorView({
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">Description</label>
             <textarea
+              value={description}
+              onChange={(e) => onDescriptionChange?.(e.target.value)}
               className="min-h-[120px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-              defaultValue="Push the onboarding flow and improve leaderboard readability before review."
             />
           </div>
 
@@ -101,7 +105,7 @@ export default function QuestConfiguratorView({
             <Badge className="rounded-full bg-violet-100 text-violet-700 hover:bg-violet-100">Active quest</Badge>
             <h3 className="mt-4 text-xl font-semibold text-slate-900">{title}</h3>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Push the onboarding flow and improve leaderboard readability before review.
+              {description}
             </p>
             <div className="mt-5">
               <Progress value={preview.pct} className="h-3 rounded-full" />

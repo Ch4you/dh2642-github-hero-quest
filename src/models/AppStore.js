@@ -15,6 +15,7 @@ export class AppStore {
   hero = new HeroModel();
   quest = new QuestModel({
     title: 'Reach 12 merged PRs before Friday',
+    description: 'Push the onboarding flow and polish leaderboard interactions before the weekly review.',
     targetMergedPRs: 12,
     deadline: '',
   });
@@ -31,6 +32,13 @@ export class AppStore {
   }
 
   setStep(step) {
+    const protectedSteps = new Set(['dashboard', 'leaderboard', 'quests']);
+    if (protectedSteps.has(step) && (!this.repo.owner || !this.repo.name)) {
+      this.flashMessage = 'Connect a repository before opening this page.';
+      this.addNotification('Navigation blocked: connect a repository first');
+      this.step = 'connect';
+      return;
+    }
     this.step = step;
   }
 
@@ -41,6 +49,8 @@ export class AppStore {
   connectRepository({ owner, name }) {
     this.repo = { owner: owner ?? '', name: name ?? '' };
     this.hero = new HeroModel();
+    this.leaderboard = [];
+    this.questDraft = null;
     this.selectedPlayer = null;
     this.errorMessage = '';
     this.syncStatus = 'synced';
@@ -50,18 +60,20 @@ export class AppStore {
     this.flashMessage = `Connected ${owner}/${name}`;
   }
 
-  updateQuest({ title, targetMergedPRs, deadline }) {
+  updateQuest({ title, description, targetMergedPRs, deadline }) {
     this.quest = new QuestModel({
       title: title ?? this.quest.title,
+      description: description ?? this.quest.description,
       targetMergedPRs: Number.isFinite(targetMergedPRs) ? targetMergedPRs : this.quest.targetMergedPRs,
       deadline: deadline ?? this.quest.deadline,
     });
     this.questDraft = null;
   }
 
-  saveQuestDraft({ title, targetMergedPRs, deadline }) {
+  saveQuestDraft({ title, description, targetMergedPRs, deadline }) {
     this.questDraft = {
       title: title ?? this.quest.title,
+      description: description ?? this.quest.description,
       targetMergedPRs: Number.isFinite(targetMergedPRs) ? targetMergedPRs : this.quest.targetMergedPRs,
       deadline: deadline ?? this.quest.deadline,
     };
@@ -82,6 +94,11 @@ export class AppStore {
   }
 
   closeNotifications() {
+    this.notificationsOpen = false;
+  }
+
+  clearNotifications() {
+    this.notifications = [];
     this.notificationsOpen = false;
   }
 

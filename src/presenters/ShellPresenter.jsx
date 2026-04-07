@@ -19,6 +19,7 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
       notificationsOpen={store.notificationsOpen}
       onToggleNotifications={store.toggleNotifications}
       onCloseNotifications={store.closeNotifications}
+      onClearNotifications={store.clearNotifications}
     >
       {children}
     </AppShell>
