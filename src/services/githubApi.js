@@ -32,26 +32,58 @@ async function fetchCommitCount(owner, repo) {
     const rateHint = response.status === 403 ? ' (possible rate limit)' : '';
     throw new Error(`GitHub commits API failed (${response.status})${rateHint}`);
   }
+
   const linkHeader = response.headers.get('link');
   const lastPage = parseLastPageFromLink(linkHeader);
   if (lastPage) return lastPage;
+
   const body = await response.json();
   return Array.isArray(body) ? body.length : 0;
 }
 
+export async function getUserProfile(username) {
+  if (!username?.trim()) {
+    throw new Error('GitHub username is required.');
+  }
+  const cleanUsername = username.trim();
+  const url = `https://api.github.com/users/${encodeURIComponent(cleanUsername)}`;
+  return fetchJsonOrThrow(url);
+}
+
+export async function getRepositories(username) {
+  if (!username?.trim()) {
+    throw new Error('GitHub username is required.');
+  }
+  const cleanUsername = username.trim();
+  const url = `https://api.github.com/users/${encodeURIComponent(cleanUsername)}/repos?per_page=100&sort=updated`;
+  return fetchJsonOrThrow(url);
+}
+
+export async function getCommits(owner, repo) {
+  if (!owner?.trim() || !repo?.trim()) {
+    throw new Error('Repository owner/name is required.');
+  }
+  const cleanOwner = owner.trim();
+  const cleanRepo = repo.trim();
+  const url = `https://api.github.com/repos/${encodeURIComponent(cleanOwner)}/${encodeURIComponent(cleanRepo)}/commits?per_page=30`;
+  return fetchJsonOrThrow(url);
+}
+
 export async function getRepoStats(owner, repo) {
-  if (!owner || !repo) {
+  if (!owner?.trim() || !repo?.trim()) {
     throw new Error('Repository owner/name is required before syncing.');
   }
 
-  const repoQuery = `${owner}/${repo}`;
+  const cleanOwner = owner.trim();
+  const cleanRepo = repo.trim();
+  const repoQuery = `${cleanOwner}/${cleanRepo}`;
   const mergedUrl = `https://api.github.com/search/issues?q=repo:${encodeURIComponent(repoQuery)}+is:pr+is:merged&per_page=1`;
   const openUrl = `https://api.github.com/search/issues?q=repo:${encodeURIComponent(repoQuery)}+is:pr+is:open&per_page=1`;
 
   const [mergedJson, openJson, commits] = await Promise.all([
     fetchJsonOrThrow(mergedUrl),
     fetchJsonOrThrow(openUrl),
-    fetchCommitCount(owner, repo),
+    fetchCommitCount(cleanOwner, cleanRepo),
   ]);
 
   return {
@@ -60,4 +92,3 @@ export async function getRepoStats(owner, repo) {
     openPRs: Number(openJson?.total_count ?? 0),
   };
 }
-
