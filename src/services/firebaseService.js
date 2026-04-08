@@ -1,5 +1,11 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import {
+  GithubAuthProvider,
+  getAuth,
+  getAdditionalUserInfo,
+  signInWithPopup,
+} from 'firebase/auth';
+import {
   getFirestore,
   doc,
   setDoc,
@@ -27,6 +33,7 @@ export function isFirebaseConfigured() {
 }
 
 let dbInstance = null;
+let authInstance = null;
 
 function getDb() {
   if (dbInstance) return dbInstance;
@@ -38,6 +45,19 @@ function getDb() {
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   dbInstance = getFirestore(app);
   return dbInstance;
+}
+
+function getFirebaseApp() {
+  if (!isFirebaseConfigured()) {
+    throw new Error('Firebase config is missing. Add VITE_FIREBASE_* env vars before using Firebase services.');
+  }
+  return getApps().length ? getApp() : initializeApp(firebaseConfig);
+}
+
+function getAuthInstance() {
+  if (authInstance) return authInstance;
+  authInstance = getAuth(getFirebaseApp());
+  return authInstance;
 }
 
 // Collection names use heroquest- prefix
@@ -175,4 +195,28 @@ export function subscribeLeaderboard({
       if (typeof onError === 'function') onError(error);
     },
   );
+}
+
+export async function signInWithGitHubPopup() {
+  const auth = getAuthInstance();
+  const provider = new GithubAuthProvider();
+  provider.addScope('read:user');
+  provider.addScope('repo');
+  const result = await signInWithPopup(auth, provider);
+
+  const user = result.user;
+  const info = getAdditionalUserInfo(result);
+  const profile = info?.profile ?? {};
+  const username =
+    (typeof profile.login === 'string' && profile.login.trim()) ||
+    (typeof user.reloadUserInfo?.screenName === 'string' && user.reloadUserInfo.screenName.trim()) ||
+    '';
+
+  return {
+    uid: user.uid,
+    username,
+    displayName: user.displayName || profile.name || username || '',
+    avatarUrl: user.photoURL || profile.avatar_url || '',
+    email: user.email || '',
+  };
 }

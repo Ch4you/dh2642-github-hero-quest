@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
 
-export default function LandingView({ onContinue }) {
+export default function LandingView({ onContinue, isAuthenticating = false, errorMessage = '' }) {
   // to do(graded): document target group, use case, and usability feedback sessions.
 
   return (
@@ -43,10 +43,17 @@ export default function LandingView({ onContinue }) {
             <CardContent className="space-y-4">
               <Button
                 onClick={onContinue}
+                disabled={isAuthenticating}
                 className="h-12 w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
               >
-                <Trophy className="mr-2 h-4 w-4" /> Sign in with Google
+                <Trophy className="mr-2 h-4 w-4" />
+                {isAuthenticating ? 'Signing in...' : 'Sign in with GitHub'}
               </Button>
+              {errorMessage && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                  {errorMessage}
+                </div>
+              )}
               <div className="flex items-center gap-3 text-xs text-slate-400">
                 <div className="h-px flex-1 bg-slate-200" /> OR <div className="h-px flex-1 bg-slate-200" />
               </div>

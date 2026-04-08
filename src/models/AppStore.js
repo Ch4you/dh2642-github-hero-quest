@@ -7,6 +7,7 @@ import {
   saveUserProgress,
   saveUserData,
   subscribeLeaderboard,
+  signInWithGitHubPopup,
 } from '../services/firebaseService.js';
 
 function mapFirebaseRecordToPlayer(row) {
@@ -44,7 +45,7 @@ export class AppStore {
   flashMessage = '';
 
   repo = { owner: '', name: '' };
-  profile = { username: 'octo.team.member' };
+  profile = { username: 'octo.team.member', displayName: '', avatarUrl: '', uid: '' };
   hero = new HeroModel();
   quest = new QuestModel({
     title: 'Reach 12 merged PRs before Friday',
@@ -175,6 +176,42 @@ export class AppStore {
 
   setProfileUsername(username) {
     this.profile.username = username;
+  }
+
+  async signInWithGitHub() {
+    const authData = await signInWithGitHubPopup();
+    const username = authData.username?.trim();
+    if (!username) {
+      throw new Error('GitHub account login succeeded but username was missing.');
+    }
+
+    runInAction(() => {
+      this.profile = {
+        username,
+        displayName: authData.displayName || username,
+        avatarUrl: authData.avatarUrl || '',
+        uid: authData.uid || '',
+      };
+      this.errorMessage = '';
+      this.flashMessage = `Signed in as ${username}`;
+      this.step = 'connect';
+    });
+
+    if (isFirebaseConfigured()) {
+      try {
+        await saveUserData({
+          username,
+          displayName: authData.displayName || username,
+          avatarUrl: authData.avatarUrl || '',
+          uid: authData.uid || '',
+          email: authData.email || '',
+        });
+      } catch {
+        runInAction(() => {
+          this.addNotification('Login succeeded, but failed to persist profile in Firebase.');
+        });
+      }
+    }
   }
 
   async validateProfileAndContinue() {
