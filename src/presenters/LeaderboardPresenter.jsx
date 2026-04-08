@@ -3,7 +3,6 @@ import { observer } from 'mobx-react-lite';
 import { useStore } from '../models/StoreProvider.jsx';
 import ShellPresenter from './ShellPresenter.jsx';
 import LeaderboardView from '../views/LeaderboardView.jsx';
-import { players } from '../models/mockData.js';
 
 const LeaderboardPresenter = observer(function LeaderboardPresenter() {
   const store = useStore();
@@ -20,7 +19,7 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
     return commits * 5 + merged * 20 + reviews * 10;
   }
 
-  const sourceRows = store.leaderboard.length ? store.leaderboard : players;
+  const sourceRows = store.leaderboard;
   const rankedRows = useMemo(() => {
     const rows = [...sourceRows];
     if (filter === 'All time') {
@@ -51,4 +50,3 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
 });
 
 export default LeaderboardPresenter;
-

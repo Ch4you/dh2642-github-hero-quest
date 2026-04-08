@@ -20,9 +20,11 @@ export default function QuestDashboardView({
   onOpenLeaderboard,
   contributors = [],
   achievements = [],
+  activeMembersCount = 0,
+  openQuestsCount = 1,
+  lastSyncedLabel = '',
+  teamXpSubtitle = '',
 }) {
-  // to do(graded): add group self-reflections (role separation + work balance) in your final report/docs.
-
   const progress = useMemo(() => {
     const goal = Math.max(1, Number(quest.targetMergedPRs ?? 1));
     const merged = Number(hero.mergedPRs ?? 0);
@@ -31,6 +33,18 @@ export default function QuestDashboardView({
   }, [quest.targetMergedPRs, hero.mergedPRs]);
 
   const topPlayers = useMemo(() => contributors.slice(0, 4), [contributors]);
+
+  const xpBars = useMemo(() => {
+    const c = Number(hero.commits ?? 0);
+    const m = Number(hero.mergedPRs ?? 0);
+    const r = Number(hero.reviews ?? 0);
+    const max = Math.max(1, c, m, r);
+    return [
+      { label: 'Commits', value: c, width: `${Math.round((c / max) * 100)}%` },
+      { label: 'Merged PRs', value: m, width: `${Math.round((m / max) * 100)}%` },
+      { label: 'Reviews', value: r, width: `${Math.round((r / max) * 100)}%` },
+    ];
+  }, [hero.commits, hero.mergedPRs, hero.reviews]);
 
   return (
     <div className="space-y-6">
@@ -42,15 +56,15 @@ export default function QuestDashboardView({
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-          {isLoading ? 'Syncing...' : 'Last synced: just now'}
+          {isLoading ? 'Syncing…' : lastSyncedLabel}
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Team XP" value={hero.xp} subtitle="+0 since last sync" icon={Star} />
-        <MetricCard title="Active Members" value="6" subtitle="All contributors mapped" icon={Users} />
-        <MetricCard title="Open Quests" value="2" subtitle="1 nearing completion" icon={Target} />
-        <MetricCard title="Merged PRs This Week" value={hero.mergedPRs} subtitle="+0 from yesterday" icon={GitPullRequest} />
+        <MetricCard title="Team XP" value={hero.xp} subtitle={teamXpSubtitle} icon={Star} />
+        <MetricCard title="Active Members" value={String(activeMembersCount)} subtitle="From leaderboard + your sync" icon={Users} />
+        <MetricCard title="Open Quests" value={String(openQuestsCount)} subtitle="Current team goal" icon={Target} />
+        <MetricCard title="Merged PRs (repo)" value={hero.mergedPRs} subtitle="From GitHub search API" icon={GitPullRequest} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
@@ -123,10 +137,9 @@ export default function QuestDashboardView({
             </CardHeader>
             <CardContent className="space-y-4">
               <StatusPill status={syncStatus} />
-              {/* to do(graded): when integrating Firebase, persist and show real-time leaderboard/quest updates after sync. */}
-              {errorMessage && <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 border border-rose-200">{errorMessage}</div>}
+              {errorMessage && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{errorMessage}</div>}
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                The last successful sync updated XP and quest progress without losing previous data.
+                Successful sync updates XP from GitHub and pushes your row to the Firebase leaderboard (when configured).
               </div>
               <Button
                 onClick={onSync}
@@ -146,13 +159,18 @@ export default function QuestDashboardView({
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle>Top contributors</CardTitle>
-              <CardDescription>Transparent ranking preview</CardDescription>
+              <CardDescription>From Firebase leaderboard for this repo</CardDescription>
             </div>
             <Button onClick={onOpenLeaderboard} variant="ghost" className="rounded-2xl">
               Open leaderboard
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
+            {topPlayers.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
+                No leaderboard rows yet. Sync with Firebase env configured so your team can appear here.
+              </div>
+            )}
             {topPlayers.map((player, index) => (
               <button
                 key={player.id}
@@ -173,7 +191,7 @@ export default function QuestDashboardView({
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-slate-900">{player.xp} XP</div>
-                  <div className="text-sm text-emerald-600">{player.trend}</div>
+                  <div className="text-sm text-emerald-600">{player.trend || '—'}</div>
                 </div>
               </button>
             ))}
@@ -186,11 +204,7 @@ export default function QuestDashboardView({
             <CardDescription>How team activity turns into progress</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {[
-              { label: 'Commits', value: hero.commits, width: '74%' },
-              { label: 'Merged PRs', value: hero.mergedPRs, width: '61%' },
-              { label: 'Reviews', value: '22', width: '42%' },
-            ].map((item) => (
+            {xpBars.map((item) => (
               <div key={item.label}>
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-slate-600">{item.label}</span>
@@ -207,4 +221,3 @@ export default function QuestDashboardView({
     </div>
   );
 }
-

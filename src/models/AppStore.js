@@ -1,7 +1,40 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { HeroModel } from './HeroModel.js';
 import { QuestModel } from './QuestModel.js';
-import { getRepoStats } from '../services/githubApi.js';
+import { getRepoStats, getUserProfile } from '../services/githubApi.js';
+import {
+  isFirebaseConfigured,
+  saveUserProgress,
+  saveUserData,
+  subscribeLeaderboard,
+} from '../services/firebaseService.js';
+
+function mapFirebaseRecordToPlayer(row) {
+  const username = String(row.username ?? '').trim() || 'unknown';
+  const displayName = typeof row.displayName === 'string' && row.displayName.trim()
+    ? row.displayName.trim()
+    : username;
+  const parts = displayName.split(/\s+/).filter(Boolean);
+  const initials =
+    parts.length >= 2
+      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+      : displayName.slice(0, 2).toUpperCase();
+
+  return {
+    id: row.id || `${username}__${row.repoKey ?? ''}`,
+    name: displayName,
+    initials,
+    xp: Number(row.xp ?? 0),
+    level: Number(row.level ?? 1),
+    commits: Number(row.commits ?? 0),
+    mergedPRs: Number(row.mergedPRs ?? 0),
+    reviews: Number(row.reviews ?? 0),
+    weeklyXp: Number(row.weeklyXp ?? row.xp ?? 0),
+    trend: row.trend ?? '',
+    streak: Number(row.streak ?? 0),
+    badges: Array.isArray(row.badges) && row.badges.length ? row.badges : ['Contributor'],
+  };
+}
 
 export class AppStore {
   step = 'login';
@@ -27,8 +60,106 @@ export class AppStore {
   notifications = [];
   nextNotificationId = 1;
 
+  lastSyncedAt = '';
+
+  leaderboardUnsubscribe = null;
+
   constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
+    makeAutoObservable(this, { leaderboardUnsubscribe: false }, { autoBind: true });
+  }
+
+  get repoKeyString() {
+    if (!this.repo?.owner?.trim() || !this.repo?.name?.trim()) return '';
+    return `${this.repo.owner.trim()}/${this.repo.name.trim()}`;
+  }
+
+  get topContributors() {
+    return this.leaderboard.slice(0, 4);
+  }
+
+  get dashboardAchievements() {
+    const items = [];
+    const qp = this.quest.progress(this.hero.mergedPRs);
+
+    if (this.hero.xp > 0 || this.hero.commits > 0 || this.hero.mergedPRs > 0) {
+      items.push({
+        title: `${this.profile.username} — ${this.hero.xp} XP (level ${this.hero.level})`,
+        type: 'level',
+        time: this.lastSyncedAt ? `Last sync: ${this.lastSyncedAt}` : 'After sync',
+      });
+    }
+
+    items.push({
+      title: `${this.quest.title}: ${qp.percentage}% (${qp.merged}/${qp.goal} merged PRs)`,
+      type: 'quest',
+      time: 'Active quest',
+    });
+
+    if (isFirebaseConfigured() && this.leaderboard.length > 0) {
+      items.push({
+        title: `${this.leaderboard.length} on live leaderboard (Firebase)`,
+        type: 'badge',
+        time: 'Team',
+      });
+    }
+
+    if (items.length === 0) {
+      items.push({
+        title: 'Connect a repository and sync to load GitHub stats',
+        type: 'quest',
+        time: 'Getting started',
+      });
+    }
+
+    return items.slice(0, 6);
+  }
+
+  get activeMembersCount() {
+    return Math.max(
+      this.leaderboard.length,
+      this.hero.xp > 0 || this.hero.mergedPRs > 0 || this.hero.commits > 0 ? 1 : 0,
+    );
+  }
+
+  dispose() {
+    this.stopLeaderboardSubscription();
+  }
+
+  stopLeaderboardSubscription() {
+    if (this.leaderboardUnsubscribe) {
+      this.leaderboardUnsubscribe();
+      this.leaderboardUnsubscribe = null;
+    }
+  }
+
+  startLeaderboardSubscription() {
+    this.stopLeaderboardSubscription();
+    if (!isFirebaseConfigured()) return;
+    const key = this.repoKeyString;
+    if (!key) return;
+    try {
+      this.leaderboardUnsubscribe = subscribeLeaderboard({
+        repoKey: key,
+        maxRows: 50,
+        onUpdate: (records) => {
+          const rows = records.map(mapFirebaseRecordToPlayer);
+          runInAction(() => {
+            this.leaderboard = rows;
+          });
+        },
+        onError: (err) => {
+          runInAction(() => {
+            this.addNotification(
+              `Leaderboard: ${err?.message ?? 'error'} (Firestore rules / VITE_FIREBASE_* / index)`,
+            );
+          });
+        },
+      });
+    } catch (e) {
+      runInAction(() => {
+        this.addNotification(`Firebase: ${e?.message ?? 'configure VITE_FIREBASE_*'}`);
+      });
+    }
   }
 
   setStep(step) {
@@ -46,7 +177,18 @@ export class AppStore {
     this.profile.username = username;
   }
 
+  async validateProfileAndContinue() {
+    const u = this.profile.username?.trim();
+    if (!u) throw new Error('Enter a GitHub username.');
+    await getUserProfile(u);
+    runInAction(() => {
+      this.profile.username = u;
+      this.step = 'connect';
+    });
+  }
+
   connectRepository({ owner, name }) {
+    this.stopLeaderboardSubscription();
     this.repo = { owner: owner ?? '', name: name ?? '' };
     this.hero = new HeroModel();
     this.leaderboard = [];
@@ -55,9 +197,14 @@ export class AppStore {
     this.errorMessage = '';
     this.syncStatus = 'synced';
     this.isLoading = false;
+    this.lastSyncedAt = '';
     this.step = 'dashboard';
     this.addNotification(`Connected ${owner}/${name}`);
     this.flashMessage = `Connected ${owner}/${name}`;
+    this.startLeaderboardSubscription();
+    queueMicrotask(() => {
+      void this.syncRepositoryData();
+    });
   }
 
   updateQuest({ title, description, targetMergedPRs, deadline }) {
@@ -120,6 +267,40 @@ export class AppStore {
     return this.quest.progress(this.hero.mergedPRs);
   }
 
+  async persistProgressToFirebase() {
+    if (!isFirebaseConfigured()) return;
+    const username = this.profile.username?.trim();
+    const key = this.repoKeyString;
+    if (!username || !key) return;
+    try {
+      await saveUserProgress({
+        username,
+        repoKey: key,
+        xp: this.hero.xp,
+        level: this.hero.level,
+        commits: this.hero.commits,
+        mergedPRs: this.hero.mergedPRs,
+        reviews: this.hero.reviews,
+      });
+      let ghProfile = null;
+      try {
+        ghProfile = await getUserProfile(username);
+      } catch {
+        ghProfile = null;
+      }
+      await saveUserData({
+        username,
+        displayName: ghProfile?.name || username,
+        avatarUrl: ghProfile?.avatar_url,
+        lastRepoKey: key,
+      });
+    } catch (e) {
+      runInAction(() => {
+        this.addNotification(`Cloud save failed: ${e?.message ?? 'unknown'}`);
+      });
+    }
+  }
+
   async syncRepositoryData() {
     if (!this.repo.owner || !this.repo.name) {
       this.syncStatus = 'error';
@@ -139,8 +320,10 @@ export class AppStore {
         this.hero = HeroModel.fromActivity(activity);
         this.syncStatus = 'synced';
         this.errorMessage = '';
+        this.lastSyncedAt = new Date().toLocaleString();
         this.addNotification('Repository synced successfully');
       });
+      void this.persistProgressToFirebase();
     } catch (error) {
       runInAction(() => {
         this.errorMessage = error?.message ?? 'Failed to sync repository activity.';
@@ -154,4 +337,3 @@ export class AppStore {
     }
   }
 }
-

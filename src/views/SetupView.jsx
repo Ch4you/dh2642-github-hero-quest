@@ -3,7 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
 
-export default function SetupView({ username, onUsernameChange, onContinue }) {
+export default function SetupView({
+  username,
+  onUsernameChange,
+  onContinue,
+  errorMessage,
+  continueDisabled,
+}) {
   return (
     <div className="min-h-screen bg-slate-50 p-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl items-center justify-center">
@@ -20,7 +26,8 @@ export default function SetupView({ username, onUsernameChange, onContinue }) {
                 onChange={(e) => onUsernameChange?.(e.target.value)}
                 className="h-12 rounded-2xl"
               />
-              <p className="text-sm text-slate-500">Example: octocat</p>
+              <p className="text-sm text-slate-500">Example: octocat (verified against api.github.com)</p>
+              {errorMessage && <p className="text-sm text-rose-600">{errorMessage}</p>}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
@@ -30,7 +37,8 @@ export default function SetupView({ username, onUsernameChange, onContinue }) {
             <div className="flex justify-end">
               <Button
                 onClick={onContinue}
-                className="h-11 rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-800"
+                disabled={continueDisabled}
+                className="h-11 rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-800 disabled:opacity-60"
               >
                 Save and continue <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
@@ -41,4 +49,3 @@ export default function SetupView({ username, onUsernameChange, onContinue }) {
     </div>
   );
 }
-

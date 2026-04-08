@@ -14,8 +14,6 @@ export default function LeaderboardView({
   searchQuery,
   onSearchQueryChange,
 }) {
-
-  // to do(graded): replace mock players with Firebase live leaderboard (real-time updates).
   const orderedPlayers = useMemo(() => rows, [rows]);
 
   return (
@@ -52,9 +50,15 @@ export default function LeaderboardView({
         <Card className="rounded-[28px] border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle>Team ranking</CardTitle>
-            <CardDescription>Click any player to inspect their XP breakdown.</CardDescription>
+            <CardDescription>Live data from Firebase for this repository (sync to appear).</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {orderedPlayers.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">
+                No entries yet. Connect a repo, set <code className="rounded bg-white px-1">VITE_FIREBASE_*</code>, then sync — each teammate syncs to join the board.
+              </div>
+            )}
+            {orderedPlayers.length > 0 && (
             <div className="hidden grid-cols-[72px_1.4fr_0.8fr_0.8fr_0.8fr_0.8fr] gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500 md:grid">
               <div>Rank</div>
               <div>Player</div>
@@ -63,6 +67,7 @@ export default function LeaderboardView({
               <div>Commits</div>
               <div>Merged PRs</div>
             </div>
+            )}
             {orderedPlayers.map((player, index) => (
               <button
                 key={player.id}
@@ -78,7 +83,7 @@ export default function LeaderboardView({
                   </Avatar>
                   <div>
                     <div className="font-medium text-slate-900">{player.name}</div>
-                    <div className="text-sm text-slate-500">{player.badges[0]}</div>
+                    <div className="text-sm text-slate-500">{player.badges?.[0] ?? '—'}</div>
                   </div>
                 </div>
                 <div className="font-semibold text-slate-900">{player.xp}</div>

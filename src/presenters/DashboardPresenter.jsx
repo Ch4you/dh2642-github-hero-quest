@@ -2,7 +2,6 @@ import { observer } from 'mobx-react-lite';
 import { useStore } from '../models/StoreProvider.jsx';
 import ShellPresenter from './ShellPresenter.jsx';
 import QuestDashboardView from '../views/QuestDashboardView.jsx';
-import { players, recentAchievements } from '../models/mockData.js';
 
 const DashboardPresenter = observer(function DashboardPresenter() {
   const store = useStore();
@@ -19,12 +18,15 @@ const DashboardPresenter = observer(function DashboardPresenter() {
         errorMessage={store.errorMessage}
         onOpenQuest={() => store.setStep('quests')}
         onOpenLeaderboard={() => store.setStep('leaderboard')}
-        contributors={players}
-        achievements={recentAchievements}
+        contributors={store.topContributors}
+        achievements={store.dashboardAchievements}
+        activeMembersCount={store.activeMembersCount}
+        openQuestsCount={1}
+        lastSyncedLabel={store.lastSyncedAt ? `Last synced: ${store.lastSyncedAt}` : 'Sync to load GitHub data'}
+        teamXpSubtitle="Repo-level stats from GitHub API"
       />
     </ShellPresenter>
   );
 });
 
 export default DashboardPresenter;
-

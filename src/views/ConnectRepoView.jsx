@@ -10,6 +10,7 @@ export default function ConnectRepoView({
   onUseSample,
   onOpenRecent,
   recentRepositories = [],
+  recentLoading = false,
   connectError,
 }) {
   return (
@@ -73,21 +74,26 @@ export default function ConnectRepoView({
             <CardTitle>Recent repositories</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentRepositories.map((repo) => (
-              <div key={repo.name} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
-                <div>
-                  <div className="font-medium text-slate-900">{repo.name}</div>
-                  <div className="text-sm text-slate-500">{repo.date}</div>
+            {recentLoading && <div className="text-sm text-slate-500">Loading your GitHub repos…</div>}
+            {!recentLoading && recentRepositories.length === 0 && (
+              <div className="text-sm text-slate-500">No public repos loaded (check username or API limits).</div>
+            )}
+            {!recentLoading &&
+              recentRepositories.map((repo) => (
+                <div key={repo.name} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
+                  <div>
+                    <div className="font-medium text-slate-900">{repo.name}</div>
+                    <div className="text-sm text-slate-500">{repo.date}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="rounded-xl"
+                    onClick={() => onOpenRecent?.(repo.name)}
+                  >
+                    Open
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  className="rounded-xl"
-                  onClick={() => onOpenRecent?.(repo.name)}
-                >
-                  Open
-                </Button>
-              </div>
-            ))}
+              ))}
           </CardContent>
         </Card>
       </div>

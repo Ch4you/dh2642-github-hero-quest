@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '../models/StoreProvider.jsx';
 import ShellPresenter from './ShellPresenter.jsx';
 import ConnectRepoView from '../views/ConnectRepoView.jsx';
-import { repoHistory } from '../models/mockData.js';
+import { getRepositories } from '../services/githubApi.js';
 
 function parseRepository(input) {
   const raw = input.trim();
@@ -21,6 +21,38 @@ const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
   const store = useStore();
   const [repositoryInput, setRepositoryInput] = useState('https://github.com/kth-media-lab/github-hero-quest');
   const [connectError, setConnectError] = useState('');
+  const [recentRepositories, setRecentRepositories] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const username = store.profile.username?.trim();
+    if (!username) {
+      setRecentRepositories([]);
+      return undefined;
+    }
+    setRecentLoading(true);
+    getRepositories(username)
+      .then((repos) => {
+        if (cancelled) return;
+        const list = (Array.isArray(repos) ? repos : [])
+          .slice(0, 8)
+          .map((r) => ({
+            name: r.full_name,
+            date: r.updated_at ? new Date(r.updated_at).toLocaleDateString() : '',
+          }));
+        setRecentRepositories(list);
+      })
+      .catch(() => {
+        if (!cancelled) setRecentRepositories([]);
+      })
+      .finally(() => {
+        if (!cancelled) setRecentLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [store.profile.username]);
 
   function connect() {
     const parsed = parseRepository(repositoryInput);
@@ -49,7 +81,8 @@ const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
           setRepositoryInput(`https://github.com/${repoName}`);
           setConnectError('');
         }}
-        recentRepositories={repoHistory}
+        recentRepositories={recentRepositories}
+        recentLoading={recentLoading}
         connectError={connectError}
       />
     </ShellPresenter>
@@ -57,4 +90,3 @@ const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
 });
 
 export default ConnectRepoPresenter;
-

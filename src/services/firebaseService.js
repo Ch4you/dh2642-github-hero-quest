@@ -1,6 +1,5 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import {
-  limit,
   getFirestore,
   doc,
   setDoc,
@@ -10,7 +9,6 @@ import {
   query,
   where,
   onSnapshot,
-  orderBy,
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -24,7 +22,7 @@ const firebaseConfig = {
 
 const REQUIRED_FIREBASE_FIELDS = ['apiKey', 'authDomain', 'projectId', 'appId'];
 
-function isFirebaseConfigured() {
+export function isFirebaseConfigured() {
   return REQUIRED_FIREBASE_FIELDS.every((field) => Boolean(firebaseConfig[field]));
 }
 
@@ -108,10 +106,6 @@ export async function getRepoData(username) {
   return snap.exists() ? snap.data() : null;
 }
 
-// ---------------------------------------------------------------------------
-// Graded stubs — to be implemented
-// ---------------------------------------------------------------------------
-
 export async function saveUserProgress(progress) {
   if (!progress?.username) throw new Error('saveUserProgress: progress.username is required');
 
@@ -166,17 +160,15 @@ export function subscribeLeaderboard({
   const db = getDb();
   const cleanRepoKey = normalizeRepoKey(repoKey);
   const rows = Math.min(100, Math.max(1, Number(maxRows) || 20));
-  const leaderboardQuery = query(
-    collection(db, LEADERBOARD_COLLECTION),
-    where('repoKey', '==', cleanRepoKey),
-    orderBy('xp', 'desc'),
-    limit(rows),
-  );
+  const leaderboardQuery = query(collection(db, LEADERBOARD_COLLECTION), where('repoKey', '==', cleanRepoKey));
 
   return onSnapshot(
     leaderboardQuery,
     (snapshot) => {
-      const records = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      const records = snapshot.docs
+        .map((item) => ({ id: item.id, ...item.data() }))
+        .sort((a, b) => Number(b.xp ?? 0) - Number(a.xp ?? 0))
+        .slice(0, rows);
       onUpdate(records);
     },
     (error) => {
