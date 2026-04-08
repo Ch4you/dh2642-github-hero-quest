@@ -9,7 +9,7 @@ const nav = [
   { key: 'dashboard', label: 'Dashboard', Icon: Trophy, step: 'dashboard' },
   { key: 'leaderboard', label: 'Leaderboard', Icon: Medal, step: 'leaderboard' },
   { key: 'quests', label: 'Quests', Icon: Target, step: 'quests' },
-  { key: 'settings', label: 'Repository Settings', Icon: Settings, step: 'connect' },
+  // { key: 'settings', label: 'Repository Settings', Icon: Settings, step: 'connect' },
 ];
 
 function NavItem({ active, Icon, label, onClick }) {
@@ -29,7 +29,7 @@ function NavItem({ active, Icon, label, onClick }) {
 }
 
 export default function AppShell({ current = 'dashboard', children }) {
-  const { repo, step, setStep, sync, status } = useGame();
+  const { repo, step, setStep, sync, status ,loadingStats } = useGame();
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -77,7 +77,7 @@ export default function AppShell({ current = 'dashboard', children }) {
                 <Button onClick={sync} variant="outline" className="rounded-2xl border-slate-200 bg-white" disabled={status === 'syncing'}>
                   <RefreshCw className={status === 'syncing' ? 'mr-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4'} /> Sync
                 </Button>
-                <Button variant="outline" size="icon" className="rounded-2xl border-slate-200 bg-white" type="button">
+                <Button variant="outline" size="icon" className="rounded-2xl border-slate-200 bg-white">
                   <Bell className="h-4 w-4" />
                 </Button>
                 <Avatar className="h-10 w-10">
@@ -87,7 +87,17 @@ export default function AppShell({ current = 'dashboard', children }) {
             </div>
           </header>
 
-          <div className="p-6 lg:p-8">{children}</div>
+          <div className="relative p-6 lg:p-8">
+            {loadingStats && (
+              <div className="pointer-events-none absolute inset-0 ...">
+                <div className="inline-flex ...">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Loading repository data...
+                </div>
+              </div>
+            )}
+            {children}
+          </div>
         </main>
       </div>
     </div>
