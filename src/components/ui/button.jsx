@@ -7,6 +7,7 @@ export function Button({
   className,
   variant = 'default',
   size = 'default',
+  type = 'button',
   ...props
 }) {
   const variantMap = {

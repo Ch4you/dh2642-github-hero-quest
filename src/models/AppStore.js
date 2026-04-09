@@ -8,6 +8,7 @@ import {
   saveUserData,
   subscribeLeaderboard,
   signInWithGitHubPopup,
+  saveAuthProfile,
 } from '../services/firebaseService.js';
 
 function mapFirebaseRecordToPlayer(row) {
@@ -178,11 +179,45 @@ export class AppStore {
     this.profile.username = username;
   }
 
+  hydrateFromFirebaseSession({ uid, username, displayName, avatarUrl }) {
+    const u = username?.trim();
+    if (!u) return;
+    runInAction(() => {
+      this.profile = {
+        username: u,
+        displayName: displayName?.trim() || u,
+        avatarUrl: avatarUrl || '',
+        uid: uid || '',
+      };
+      if (this.step === 'login') {
+        this.step = 'connect';
+      }
+    });
+  }
+
+  applySignedOut() {
+    runInAction(() => {
+      try {
+        localStorage.removeItem('heroquest_github_login');
+      } catch {
+        /* ignore */
+      }
+      this.profile = { username: 'octo.team.member', displayName: '', avatarUrl: '', uid: '' };
+      this.step = 'login';
+    });
+  }
+
   async signInWithGitHub() {
     const authData = await signInWithGitHubPopup();
     const username = authData.username?.trim();
     if (!username) {
       throw new Error('GitHub account login succeeded but username was missing.');
+    }
+
+    try {
+      localStorage.setItem('heroquest_github_login', username);
+    } catch {
+      /* ignore */
     }
 
     runInAction(() => {
@@ -198,6 +233,18 @@ export class AppStore {
     });
 
     if (isFirebaseConfigured()) {
+      try {
+        await saveAuthProfile({
+          uid: authData.uid,
+          username,
+          displayName: authData.displayName || username,
+          avatarUrl: authData.avatarUrl || '',
+        });
+      } catch {
+        runInAction(() => {
+          this.addNotification('Could not save auth profile mapping (Firestore rules?).');
+        });
+      }
       try {
         await saveUserData({
           username,
@@ -305,10 +352,10 @@ export class AppStore {
   }
 
   async persistProgressToFirebase() {
-    if (!isFirebaseConfigured()) return;
+    if (!isFirebaseConfigured()) return true;
     const username = this.profile.username?.trim();
     const key = this.repoKeyString;
-    if (!username || !key) return;
+    if (!username || !key) return true;
     try {
       await saveUserProgress({
         username,
@@ -318,6 +365,7 @@ export class AppStore {
         commits: this.hero.commits,
         mergedPRs: this.hero.mergedPRs,
         reviews: this.hero.reviews,
+        displayName: this.profile.displayName || username,
       });
       let ghProfile = null;
       try {
@@ -327,14 +375,18 @@ export class AppStore {
       }
       await saveUserData({
         username,
-        displayName: ghProfile?.name || username,
-        avatarUrl: ghProfile?.avatar_url,
+        displayName: ghProfile?.name || this.profile.displayName || username,
+        avatarUrl: ghProfile?.avatar_url || this.profile.avatarUrl,
         lastRepoKey: key,
       });
+      return true;
     } catch (e) {
       runInAction(() => {
-        this.addNotification(`Cloud save failed: ${e?.message ?? 'unknown'}`);
+        const msg = e?.message ?? 'unknown';
+        this.addNotification(`Cloud save failed: ${msg}`);
+        this.flashMessage = `Leaderboard not updated: ${msg}`;
       });
+      return false;
     }
   }
 
@@ -360,7 +412,12 @@ export class AppStore {
         this.lastSyncedAt = new Date().toLocaleString();
         this.addNotification('Repository synced successfully');
       });
-      void this.persistProgressToFirebase();
+      const cloudOk = await this.persistProgressToFirebase();
+      if (isFirebaseConfigured() && cloudOk) {
+        runInAction(() => {
+          this.flashMessage = 'Synced with GitHub and updated leaderboard.';
+        });
+      }
     } catch (error) {
       runInAction(() => {
         this.errorMessage = error?.message ?? 'Failed to sync repository activity.';

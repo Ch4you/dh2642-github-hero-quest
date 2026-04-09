@@ -3,6 +3,7 @@ import {
   GithubAuthProvider,
   getAuth,
   getAdditionalUserInfo,
+  onAuthStateChanged,
   signInWithPopup,
 } from 'firebase/auth';
 import {
@@ -65,6 +66,7 @@ const USERS_COLLECTION = 'heroquest-users';
 const REPOS_COLLECTION = 'heroquest-repos';
 const USER_PROGRESS_COLLECTION = 'heroquest-user-progress';
 const LEADERBOARD_COLLECTION = 'heroquest-leaderboard';
+const AUTH_PROFILE_COLLECTION = 'heroquest-auth-profile';
 
 function normalizeRepoKey(repoKey = 'default') {
   return String(repoKey).trim().replaceAll('/', '__') || 'default';
@@ -134,10 +136,16 @@ export async function saveUserProgress(progress) {
   const progressDocId = `${progress.username}__${repoKey}`;
   const progressRef = doc(db, USER_PROGRESS_COLLECTION, progressDocId);
 
+  const displayName =
+    typeof progress.displayName === 'string' && progress.displayName.trim()
+      ? progress.displayName.trim()
+      : progress.username;
+
   await setDoc(
     progressRef,
     {
       username: progress.username,
+      displayName,
       repoKey,
       xp: Number(progress.xp ?? 0),
       level: Number(progress.level ?? 1),
@@ -155,6 +163,7 @@ export async function saveUserProgress(progress) {
     {
       id: progressDocId,
       username: progress.username,
+      displayName,
       repoKey,
       xp: Number(progress.xp ?? 0),
       level: Number(progress.level ?? 1),
@@ -195,6 +204,59 @@ export function subscribeLeaderboard({
       if (typeof onError === 'function') onError(error);
     },
   );
+}
+
+export async function saveAuthProfile({ uid, username, displayName, avatarUrl }) {
+  if (!uid || !username?.trim()) return;
+  const db = getDb();
+  await setDoc(
+    doc(db, AUTH_PROFILE_COLLECTION, uid),
+    {
+      username: username.trim(),
+      displayName: displayName?.trim() || username.trim(),
+      avatarUrl: avatarUrl || '',
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function getAuthProfile(uid) {
+  if (!uid) return null;
+  const db = getDb();
+  const snap = await getDoc(doc(db, AUTH_PROFILE_COLLECTION, uid));
+  return snap.exists() ? snap.data() : null;
+}
+
+export function subscribeAuthState(onChange) {
+  if (!isFirebaseConfigured()) {
+    return () => {};
+  }
+  const auth = getAuthInstance();
+  return onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      onChange(null);
+      return;
+    }
+    try {
+      const db = getDb();
+      const snap = await getDoc(doc(db, AUTH_PROFILE_COLLECTION, user.uid));
+      const fromDb = snap.exists() ? snap.data() : null;
+      onChange({
+        uid: user.uid,
+        username: fromDb?.username || '',
+        displayName: fromDb?.displayName || '',
+        avatarUrl: fromDb?.avatarUrl || user.photoURL || '',
+      });
+    } catch {
+      onChange({
+        uid: user.uid,
+        username: '',
+        displayName: '',
+        avatarUrl: user.photoURL || '',
+      });
+    }
+  });
 }
 
 export async function signInWithGitHubPopup() {
