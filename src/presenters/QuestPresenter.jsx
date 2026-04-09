@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '../models/StoreProvider.jsx';
-import ShellPresenter from './ShellPresenter.jsx';
 import QuestConfiguratorView from '../views/QuestConfiguratorView.jsx';
 
 const QuestPresenter = observer(function QuestPresenter() {
@@ -23,29 +22,27 @@ const QuestPresenter = observer(function QuestPresenter() {
   }
 
   return (
-    <ShellPresenter current="quests">
-      <QuestConfiguratorView
-        title={title}
-        description={description}
-        target={target}
-        deadline={deadline}
-        hero={store.hero}
-        onTitleChange={setTitle}
-        onDescriptionChange={setDescription}
-        onTargetChange={setTarget}
-        onDeadlineChange={setDeadline}
-        targetMergedPRsBase={store.quest.targetMergedPRs}
-        onSaveQuest={() => {
-          store.updateQuest(buildPayload());
-          store.setStep('dashboard');
-        }}
-        onSaveDraft={() => {
-          store.saveQuestDraft(buildPayload());
-          store.setStep('dashboard');
-        }}
-        onBackDashboard={() => store.setStep('dashboard')}
-      />
-    </ShellPresenter>
+    <QuestConfiguratorView
+      title={title}
+      description={description}
+      target={target}
+      deadline={deadline}
+      hero={store.hero}
+      onTitleChange={setTitle}
+      onDescriptionChange={setDescription}
+      onTargetChange={setTarget}
+      onDeadlineChange={setDeadline}
+      targetMergedPRsBase={store.quest.targetMergedPRs}
+      onSaveQuest={() => {
+        store.updateQuest(buildPayload());
+        store.setStep('dashboard');
+      }}
+      onSaveDraft={() => {
+        store.saveQuestDraft(buildPayload());
+        store.setStep('dashboard');
+      }}
+      onBackDashboard={() => store.setStep('dashboard')}
+    />
   );
 });
 

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '../models/StoreProvider.jsx';
-import ShellPresenter from './ShellPresenter.jsx';
 import LeaderboardView from '../views/LeaderboardView.jsx';
 
 const LeaderboardPresenter = observer(function LeaderboardPresenter() {
@@ -35,17 +34,15 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
   }, [rankedRows, searchQuery]);
 
   return (
-    <ShellPresenter current="leaderboard">
-      <LeaderboardView
-        repo={store.repo}
-        rows={visibleRows}
-        filter={filter}
-        onFilterChange={setFilter}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        onSelectPlayer={store.selectPlayer}
-      />
-    </ShellPresenter>
+    <LeaderboardView
+      repo={store.repo}
+      rows={visibleRows}
+      filter={filter}
+      onFilterChange={setFilter}
+      searchQuery={searchQuery}
+      onSearchQueryChange={setSearchQuery}
+      onSelectPlayer={store.selectPlayer}
+    />
   );
 });
 

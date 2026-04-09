@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '../models/StoreProvider.jsx';
-import ShellPresenter from './ShellPresenter.jsx';
 import ConnectRepoView from '../views/ConnectRepoView.jsx';
 import { getRepositories } from '../services/githubApi.js';
 
@@ -65,27 +64,25 @@ const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
   }
 
   return (
-    <ShellPresenter current="settings">
-      <ConnectRepoView
-        repositoryInput={repositoryInput}
-        onRepositoryInputChange={(value) => {
-          setRepositoryInput(value);
-          if (connectError) setConnectError('');
-        }}
-        onConnect={connect}
-        onUseSample={() => {
-          setRepositoryInput('https://github.com/kth-media-lab/github-hero-quest');
-          setConnectError('');
-        }}
-        onOpenRecent={(repoName) => {
-          setRepositoryInput(`https://github.com/${repoName}`);
-          setConnectError('');
-        }}
-        recentRepositories={recentRepositories}
-        recentLoading={recentLoading}
-        connectError={connectError}
-      />
-    </ShellPresenter>
+    <ConnectRepoView
+      repositoryInput={repositoryInput}
+      onRepositoryInputChange={(value) => {
+        setRepositoryInput(value);
+        if (connectError) setConnectError('');
+      }}
+      onConnect={connect}
+      onUseSample={() => {
+        setRepositoryInput('https://github.com/kth-media-lab/github-hero-quest');
+        setConnectError('');
+      }}
+      onOpenRecent={(repoName) => {
+        setRepositoryInput(`https://github.com/${repoName}`);
+        setConnectError('');
+      }}
+      recentRepositories={recentRepositories}
+      recentLoading={recentLoading}
+      connectError={connectError}
+    />
   );
 });
 

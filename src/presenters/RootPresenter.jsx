@@ -8,42 +8,74 @@ import ConnectRepoPresenter from './ConnectRepoPresenter.jsx';
 import DashboardPresenter from './DashboardPresenter.jsx';
 import LeaderboardPresenter from './LeaderboardPresenter.jsx';
 import QuestPresenter from './QuestPresenter.jsx';
+import ShellPresenter from './ShellPresenter.jsx';
+
+const shellStepFade = { duration: 0.22, ease: [0.22, 1, 0.36, 1] };
+
+function shellNavFromStep(step) {
+  if (step === 'connect') return 'settings';
+  return step;
+}
 
 const RootPresenter = observer(function RootPresenter() {
   const store = useStore();
+  const step = store.step;
+  const isAuthFlow = step === 'login' || step === 'setup';
+  const isShellStep = step === 'connect' || step === 'dashboard' || step === 'leaderboard' || step === 'quests';
 
-  const screen = (() => {
-    switch (store.step) {
-      case 'login':
-        return <LoginPresenter />;
-      case 'setup':
-        return <SetupPresenter />;
+  let shellBody = null;
+  if (isShellStep) {
+    switch (step) {
       case 'connect':
-        return <ConnectRepoPresenter />;
+        shellBody = <ConnectRepoPresenter />;
+        break;
       case 'dashboard':
-        return <DashboardPresenter />;
+        shellBody = <DashboardPresenter />;
+        break;
       case 'leaderboard':
-        return <LeaderboardPresenter />;
+        shellBody = <LeaderboardPresenter />;
+        break;
       case 'quests':
-        return <QuestPresenter />;
+        shellBody = <QuestPresenter />;
+        break;
       default:
-        return null;
+        shellBody = null;
     }
-  })();
+  }
 
   return (
     <>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={store.step}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.2 }}
-        >
-          {screen}
-        </motion.div>
-      </AnimatePresence>
+      {isAuthFlow ? (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            className="min-h-dvh"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={shellStepFade}
+          >
+            {step === 'login' ? <LoginPresenter /> : <SetupPresenter />}
+          </motion.div>
+        </AnimatePresence>
+      ) : isShellStep ? (
+        <ShellPresenter current={shellNavFromStep(step)}>
+          <div className="relative min-h-[12rem]">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={step}
+                className="w-full"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={shellStepFade}
+              >
+                {shellBody}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </ShellPresenter>
+      ) : null}
       <PlayerDrawer
         player={store.selectedPlayer}
         open={!!store.selectedPlayer}
