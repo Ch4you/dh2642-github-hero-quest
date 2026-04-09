@@ -3,12 +3,25 @@ import { CheckCircle2, Trophy } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
+import { LoadingSpinner } from '../components/ui/loading-spinner.jsx';
 
-export default function LandingView({ onContinue, isAuthenticating = false, errorMessage = '' }) {
+export default function LandingView({
+  onContinue,
+  isAuthenticating = false,
+  authPhase = 'Signing in and loading repository data...',
+  errorMessage = '',
+}) {
   // to do(graded): document target group, use case, and usability feedback sessions.
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
+    <div className="relative min-h-screen bg-slate-50 p-8">
+      {isAuthenticating && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-50/80 backdrop-blur-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+            <LoadingSpinner className="h-5 w-5" label={authPhase} />
+          </div>
+        </div>
+      )}
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl grid-cols-1 gap-8 lg:grid-cols-2">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col justify-center px-4 lg:px-12">
           <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm">

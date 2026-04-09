@@ -4,6 +4,7 @@ import {
   getAuth,
   getAdditionalUserInfo,
   onAuthStateChanged,
+  signOut,
   signInWithPopup,
 } from 'firebase/auth';
 import {
@@ -281,4 +282,10 @@ export async function signInWithGitHubPopup() {
     avatarUrl: user.photoURL || profile.avatar_url || '',
     email: user.email || '',
   };
+}
+
+export async function signOutCurrentUser() {
+  if (!isFirebaseConfigured()) return;
+  const auth = getAuthInstance();
+  await signOut(auth);
 }

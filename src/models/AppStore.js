@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import { HeroModel } from './HeroModel.js';
 import { QuestModel } from './QuestModel.js';
-import { getRepoStats, getUserProfile } from '../services/githubApi.js';
+import { getRepoStats, getRepositories, getUserProfile } from '../services/githubApi.js';
 import {
   isFirebaseConfigured,
   saveUserProgress,
@@ -9,6 +9,8 @@ import {
   subscribeLeaderboard,
   signInWithGitHubPopup,
   saveAuthProfile,
+  getUserData,
+  signOutCurrentUser,
 } from '../services/firebaseService.js';
 
 function mapFirebaseRecordToPlayer(row) {
@@ -38,6 +40,31 @@ function mapFirebaseRecordToPlayer(row) {
   };
 }
 
+function parseRepoKey(repoKey) {
+  const raw = String(repoKey ?? '').trim();
+  if (!raw || !raw.includes('/')) return null;
+  const [owner, name] = raw.split('/');
+  if (!owner || !name) return null;
+  return { owner, name };
+}
+
+function pickBestRepository(repos, username) {
+  const cleanUsername = String(username ?? '').trim().toLowerCase();
+  const rows = Array.isArray(repos) ? repos : [];
+  if (!rows.length) return null;
+
+  const byOwner = rows.filter((repo) => String(repo?.owner?.login ?? '').toLowerCase() === cleanUsername);
+  const source = byOwner.length ? byOwner : rows;
+  const active = source.filter((repo) => !repo?.fork && !repo?.archived);
+  const candidates = active.length ? active : source;
+  candidates.sort((a, b) => {
+    const ta = new Date(a?.pushed_at ?? a?.updated_at ?? 0).getTime();
+    const tb = new Date(b?.pushed_at ?? b?.updated_at ?? 0).getTime();
+    return tb - ta;
+  });
+  return candidates[0] ?? null;
+}
+
 export class AppStore {
   step = 'login';
   syncStatus = 'synced';
@@ -63,6 +90,7 @@ export class AppStore {
   nextNotificationId = 1;
 
   lastSyncedAt = '';
+  loadingPhase = '';
 
   leaderboardUnsubscribe = null;
 
@@ -77,6 +105,15 @@ export class AppStore {
 
   get topContributors() {
     return this.leaderboard.slice(0, 4);
+  }
+
+  get profileInitials() {
+    const source = this.profile.displayName || this.profile.username || '';
+    const parts = source.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return source.slice(0, 2).toUpperCase() || 'HQ';
   }
 
   get dashboardAchievements() {
@@ -179,6 +216,47 @@ export class AppStore {
     this.profile.username = username;
   }
 
+  async autoConnectForUsername(usernameInput) {
+    const username = String(usernameInput ?? '').trim();
+    if (!username) return false;
+    if (this.repo.owner && this.repo.name) return true;
+
+    let preferredRepo = null;
+    if (isFirebaseConfigured()) {
+      runInAction(() => {
+        this.loadingPhase = 'Checking your last connected repository...';
+      });
+      try {
+        const userDoc = await getUserData(username);
+        preferredRepo = parseRepoKey(userDoc?.lastRepoKey);
+      } catch {
+        preferredRepo = null;
+      }
+    }
+
+    if (preferredRepo?.owner && preferredRepo?.name) {
+      runInAction(() => {
+        this.loadingPhase = 'Reconnecting your previous repository...';
+      });
+      this.connectRepository(preferredRepo);
+      return true;
+    }
+
+    runInAction(() => {
+      this.loadingPhase = 'Loading your repositories from GitHub...';
+    });
+    const repos = await getRepositories(username);
+    const selected = pickBestRepository(repos, username);
+    if (!selected?.name) return false;
+
+    runInAction(() => {
+      this.loadingPhase = 'Connecting your latest active repository...';
+    });
+    const owner = selected?.owner?.login || username;
+    this.connectRepository({ owner, name: selected.name });
+    return true;
+  }
+
   hydrateFromFirebaseSession({ uid, username, displayName, avatarUrl }) {
     const u = username?.trim();
     if (!u) return;
@@ -202,13 +280,38 @@ export class AppStore {
       } catch {
         /* ignore */
       }
+      this.stopLeaderboardSubscription();
       this.profile = { username: 'octo.team.member', displayName: '', avatarUrl: '', uid: '' };
+      this.repo = { owner: '', name: '' };
+      this.hero = new HeroModel();
+      this.leaderboard = [];
+      this.selectedPlayer = null;
+      this.notificationsOpen = false;
+      this.syncStatus = 'synced';
+      this.isLoading = false;
+      this.loadingPhase = '';
+      this.errorMessage = '';
+      this.flashMessage = '';
       this.step = 'login';
     });
   }
 
-  async signInWithGitHub() {
+  async signOut() {
+    this.loadingPhase = 'Signing out...';
+    this.isLoading = true;
+    try {
+      await signOutCurrentUser();
+    } catch (error) {
+      this.addNotification(`Sign-out warning: ${error?.message ?? 'unknown'}`);
+    } finally {
+      this.applySignedOut();
+    }
+  }
+
+  async signInWithGitHub(onPhase) {
+    onPhase?.('Opening GitHub authorization...');
     const authData = await signInWithGitHubPopup();
+    onPhase?.('Verifying GitHub identity...');
     const username = authData.username?.trim();
     if (!username) {
       throw new Error('GitHub account login succeeded but username was missing.');
@@ -233,6 +336,7 @@ export class AppStore {
     });
 
     if (isFirebaseConfigured()) {
+      onPhase?.('Saving your profile in Firebase...');
       try {
         await saveAuthProfile({
           uid: authData.uid,
@@ -259,6 +363,22 @@ export class AppStore {
         });
       }
     }
+
+    try {
+      onPhase?.('Selecting a repository and syncing data...');
+      const connected = await this.autoConnectForUsername(username);
+      if (!connected) {
+        runInAction(() => {
+          this.flashMessage = 'No repository auto-detected. Connect one manually.';
+          this.step = 'connect';
+        });
+      }
+    } catch (error) {
+      runInAction(() => {
+        this.addNotification(`Auto-connect failed: ${error?.message ?? 'unknown'}`);
+        this.step = 'connect';
+      });
+    }
   }
 
   async validateProfileAndContinue() {
@@ -281,6 +401,7 @@ export class AppStore {
     this.errorMessage = '';
     this.syncStatus = 'synced';
     this.isLoading = false;
+    this.loadingPhase = 'Preparing dashboard...';
     this.lastSyncedAt = '';
     this.step = 'dashboard';
     this.addNotification(`Connected ${owner}/${name}`);
@@ -396,11 +517,13 @@ export class AppStore {
       this.errorMessage = 'Please connect a repository before syncing.';
       this.addNotification('Sync failed: connect a repository first');
       this.flashMessage = 'Please connect a repository before syncing.';
+      this.loadingPhase = '';
       return;
     }
 
     this.isLoading = true;
     this.syncStatus = 'syncing';
+    this.loadingPhase = 'Syncing GitHub repository stats...';
     this.errorMessage = '';
 
     try {
@@ -411,6 +534,9 @@ export class AppStore {
         this.errorMessage = '';
         this.lastSyncedAt = new Date().toLocaleString();
         this.addNotification('Repository synced successfully');
+      });
+      runInAction(() => {
+        this.loadingPhase = 'Updating Firebase leaderboard...';
       });
       const cloudOk = await this.persistProgressToFirebase();
       if (isFirebaseConfigured() && cloudOk) {
@@ -427,6 +553,7 @@ export class AppStore {
     } finally {
       runInAction(() => {
         this.isLoading = false;
+        this.loadingPhase = '';
       });
     }
   }

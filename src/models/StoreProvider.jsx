@@ -45,6 +45,9 @@ export function StoreProvider({ children }) {
           displayName: displayName || username,
           avatarUrl,
         });
+        if (!store.repo.owner || !store.repo.name) {
+          void store.autoConnectForUsername(username.trim()).catch(() => {});
+        }
       }
     });
 
