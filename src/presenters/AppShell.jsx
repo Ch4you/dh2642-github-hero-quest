@@ -123,7 +123,7 @@ export default function AppShell({
             </div>
             <div>
               <div className="font-semibold text-slate-900">GitHub Hero Quest</div>
-              <div className="text-xs text-slate-500">Prototype</div>
+              
             </div>
           </div>
 
