@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:pages": "VITE_BASE_PATH=/dh2642-github-hero-quest/ vite build",
     "preview": "vite preview"
   },
   "dependencies": {
