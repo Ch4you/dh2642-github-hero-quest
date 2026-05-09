@@ -21,7 +21,7 @@ export function TabsTrigger({ value, className, ...props }) {
       onClick={() => ctx.onValueChange?.(value)}
       className={cn(
         'px-3 py-1.5 text-sm rounded-xl transition',
-        active ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100',
+        active ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-200' : 'text-slate-700 hover:bg-slate-100',
         className,
       )}
       {...props}

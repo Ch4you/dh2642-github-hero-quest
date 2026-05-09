@@ -29,24 +29,20 @@ const firebaseConfig = {
 };
 
 const REQUIRED_FIREBASE_FIELDS = ['apiKey', 'authDomain', 'projectId', 'appId'];
-
-export function isFirebaseConfigured() {
-  return REQUIRED_FIREBASE_FIELDS.every((field) => Boolean(firebaseConfig[field]));
-}
+const USERS_COLLECTION = 'heroquest-users';
+const USER_PROGRESS_COLLECTION = 'heroquest-user-progress';
+const LEADERBOARD_COLLECTION = 'heroquest-leaderboard';
+const AUTH_PROFILE_COLLECTION = 'heroquest-auth-profile';
+const QUESTS_COLLECTION = 'heroquest-quests';
+const REQUESTS_COLLECTION = 'heroquest-requests';
+const SCORE_RULES_COLLECTION = 'heroquest-score-rules';
+const WORKSPACES_COLLECTION = 'heroquest-workspaces';
 
 let dbInstance = null;
 let authInstance = null;
 
-function getDb() {
-  if (dbInstance) return dbInstance;
-
-  if (!isFirebaseConfigured()) {
-    throw new Error('Firebase config is missing. Add VITE_FIREBASE_* env vars before using Firebase services.');
-  }
-
-  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  dbInstance = getFirestore(app);
-  return dbInstance;
+export function isFirebaseConfigured() {
+  return REQUIRED_FIREBASE_FIELDS.every((field) => Boolean(firebaseConfig[field]));
 }
 
 function getFirebaseApp() {
@@ -56,76 +52,75 @@ function getFirebaseApp() {
   return getApps().length ? getApp() : initializeApp(firebaseConfig);
 }
 
+function getDb() {
+  if (dbInstance) return dbInstance;
+  dbInstance = getFirestore(getFirebaseApp());
+  return dbInstance;
+}
+
 function getAuthInstance() {
   if (authInstance) return authInstance;
   authInstance = getAuth(getFirebaseApp());
   return authInstance;
 }
 
-// Collection names use heroquest- prefix
-const USERS_COLLECTION = 'heroquest-users';
-const REPOS_COLLECTION = 'heroquest-repos';
-const USER_PROGRESS_COLLECTION = 'heroquest-user-progress';
-const LEADERBOARD_COLLECTION = 'heroquest-leaderboard';
-const AUTH_PROFILE_COLLECTION = 'heroquest-auth-profile';
-
 function normalizeRepoKey(repoKey = 'default') {
   return String(repoKey).trim().replaceAll('/', '__') || 'default';
 }
 
-// ---------------------------------------------------------------------------
-// User data
-// ---------------------------------------------------------------------------
+function getWorkspaceDocId({ uid, username } = {}) {
+  const preferred = String(uid || username || '').trim();
+  if (!preferred) throw new Error('Workspace persistence requires a signed-in user.');
+  return preferred;
+}
 
-/**
- * Save (upsert) a user's profile + stats document.
- * @param {{ username: string, [key: string]: any }} data  Must include `username`.
- */
+function normalizeRepository(repository) {
+  const owner = String(repository?.owner ?? '').trim();
+  const name = String(repository?.name ?? '').trim();
+  if (!owner || !name) return null;
+  return { owner, name };
+}
+
+function normalizeRepositoryList(repositories = []) {
+  const seen = new Set();
+  return (Array.isArray(repositories) ? repositories : [])
+    .map(normalizeRepository)
+    .filter(Boolean)
+    .filter((repository) => {
+      const key = `${repository.owner}/${repository.name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function normalizeRequestList(requests = []) {
+  return (Array.isArray(requests) ? requests : [])
+    .map((request) => ({
+      id: String(request?.id || '').trim(),
+      title: String(request?.title || 'Untitled request').trim(),
+      description: String(request?.description || '').trim(),
+      metricType: String(request?.metricType || 'repoMergedPRs').trim(),
+      targetValue: Math.max(1, Number(request?.targetValue || 1)),
+      startDate: String(request?.startDate || '').trim(),
+      endDate: String(request?.endDate || '').trim(),
+      rewardXp: Number(request?.rewardXp ?? 50),
+      repoKey: String(request?.repoKey || '').trim(),
+      archived: Boolean(request?.archived),
+    }))
+    .filter((request) => request.id && request.title);
+}
+
 export async function saveUserData(data) {
   if (!data?.username) throw new Error('saveUserData: data.username is required');
   const db = getDb();
-  const ref = doc(db, USERS_COLLECTION, data.username);
-  await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+  await setDoc(doc(db, USERS_COLLECTION, data.username), { ...data, updatedAt: serverTimestamp() }, { merge: true });
 }
 
-/**
- * Retrieve a user document by username.
- * @param {string} username
- * @returns {Object|null} document data or null if not found
- */
 export async function getUserData(username) {
   if (!username) throw new Error('getUserData: username is required');
   const db = getDb();
-  const ref = doc(db, USERS_COLLECTION, username);
-  const snap = await getDoc(ref);
-  return snap.exists() ? snap.data() : null;
-}
-
-// ---------------------------------------------------------------------------
-// Repository data
-// ---------------------------------------------------------------------------
-
-/**
- * Save (upsert) repository stats for a user.
- * @param {{ username: string, repos: Array, [key: string]: any }} data  Must include `username`.
- */
-export async function saveRepoData(data) {
-  if (!data?.username) throw new Error('saveRepoData: data.username is required');
-  const db = getDb();
-  const ref = doc(db, REPOS_COLLECTION, data.username);
-  await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
-}
-
-/**
- * Retrieve repository data for a user.
- * @param {string} username
- * @returns {Object|null} document data or null if not found
- */
-export async function getRepoData(username) {
-  if (!username) throw new Error('getRepoData: username is required');
-  const db = getDb();
-  const ref = doc(db, REPOS_COLLECTION, username);
-  const snap = await getDoc(ref);
+  const snap = await getDoc(doc(db, USERS_COLLECTION, username));
   return snap.exists() ? snap.data() : null;
 }
 
@@ -135,54 +130,31 @@ export async function saveUserProgress(progress) {
   const db = getDb();
   const repoKey = normalizeRepoKey(progress.repoKey);
   const progressDocId = `${progress.username}__${repoKey}`;
-  const progressRef = doc(db, USER_PROGRESS_COLLECTION, progressDocId);
-
   const displayName =
     typeof progress.displayName === 'string' && progress.displayName.trim()
       ? progress.displayName.trim()
       : progress.username;
+  const payload = {
+    id: progressDocId,
+    username: progress.username,
+    displayName,
+    repoKey,
+    xp: Number(progress.xp ?? 0),
+    level: Number(progress.level ?? 1),
+    commits: Number(progress.commits ?? 0),
+    mergedPRs: Number(progress.mergedPRs ?? 0),
+    openPRs: Number(progress.openPRs ?? 0),
+    reviews: Number(progress.reviews ?? 0),
+    requestBonusXp: Number(progress.requestBonusXp ?? 0),
+    weeklyXp: Number(progress.weeklyXp ?? progress.xp ?? 0),
+    updatedAt: serverTimestamp(),
+  };
 
-  await setDoc(
-    progressRef,
-    {
-      username: progress.username,
-      displayName,
-      repoKey,
-      xp: Number(progress.xp ?? 0),
-      level: Number(progress.level ?? 1),
-      commits: Number(progress.commits ?? 0),
-      mergedPRs: Number(progress.mergedPRs ?? 0),
-      reviews: Number(progress.reviews ?? 0),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-
-  const leaderboardRef = doc(db, LEADERBOARD_COLLECTION, progressDocId);
-  await setDoc(
-    leaderboardRef,
-    {
-      id: progressDocId,
-      username: progress.username,
-      displayName,
-      repoKey,
-      xp: Number(progress.xp ?? 0),
-      level: Number(progress.level ?? 1),
-      commits: Number(progress.commits ?? 0),
-      mergedPRs: Number(progress.mergedPRs ?? 0),
-      reviews: Number(progress.reviews ?? 0),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+  await setDoc(doc(db, USER_PROGRESS_COLLECTION, progressDocId), payload, { merge: true });
+  await setDoc(doc(db, LEADERBOARD_COLLECTION, progressDocId), payload, { merge: true });
 }
 
-export function subscribeLeaderboard({
-  repoKey = 'default',
-  maxRows = 20,
-  onUpdate,
-  onError,
-} = {}) {
+export function subscribeLeaderboard({ repoKey = 'default', maxRows = 20, onUpdate, onError } = {}) {
   if (typeof onUpdate !== 'function') {
     throw new Error('subscribeLeaderboard: onUpdate callback is required');
   }
@@ -222,17 +194,8 @@ export async function saveAuthProfile({ uid, username, displayName, avatarUrl })
   );
 }
 
-export async function getAuthProfile(uid) {
-  if (!uid) return null;
-  const db = getDb();
-  const snap = await getDoc(doc(db, AUTH_PROFILE_COLLECTION, uid));
-  return snap.exists() ? snap.data() : null;
-}
-
 export function subscribeAuthState(onChange) {
-  if (!isFirebaseConfigured()) {
-    return () => {};
-  }
+  if (!isFirebaseConfigured()) return () => {};
   const auth = getAuthInstance();
   return onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -250,12 +213,7 @@ export function subscribeAuthState(onChange) {
         avatarUrl: fromDb?.avatarUrl || user.photoURL || '',
       });
     } catch {
-      onChange({
-        uid: user.uid,
-        username: '',
-        displayName: '',
-        avatarUrl: user.photoURL || '',
-      });
+      onChange({ uid: user.uid, username: '', displayName: '', avatarUrl: user.photoURL || '' });
     }
   });
 }
@@ -264,9 +222,7 @@ export async function signInWithGitHubPopup() {
   const auth = getAuthInstance();
   const provider = new GithubAuthProvider();
   provider.addScope('read:user');
-  provider.addScope('repo');
   const result = await signInWithPopup(auth, provider);
-
   const user = result.user;
   const info = getAdditionalUserInfo(result);
   const profile = info?.profile ?? {};
@@ -286,6 +242,130 @@ export async function signInWithGitHubPopup() {
 
 export async function signOutCurrentUser() {
   if (!isFirebaseConfigured()) return;
-  const auth = getAuthInstance();
-  await signOut(auth);
+  await signOut(getAuthInstance());
 }
+
+export async function saveQuestForRepo({ repoKey, quest, updatedBy }) {
+  if (!repoKey) throw new Error('saveQuestForRepo: repoKey is required');
+  const db = getDb();
+  const cleanRepoKey = normalizeRepoKey(repoKey);
+  await setDoc(
+    doc(db, QUESTS_COLLECTION, cleanRepoKey),
+    {
+      ...quest,
+      repoKey: cleanRepoKey,
+      updatedBy: updatedBy || '',
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export function subscribeQuestForRepo({ repoKey, onUpdate, onError }) {
+  if (!repoKey || typeof onUpdate !== 'function') return () => {};
+  const db = getDb();
+  const cleanRepoKey = normalizeRepoKey(repoKey);
+  return onSnapshot(
+    doc(db, QUESTS_COLLECTION, cleanRepoKey),
+    (snapshot) => {
+      if (snapshot.exists()) onUpdate(snapshot.data());
+    },
+    (error) => {
+      if (typeof onError === 'function') onError(error);
+    },
+  );
+}
+
+export async function saveRequestsForRepo({ repoKey, requests, updatedBy }) {
+  if (!repoKey) throw new Error('saveRequestsForRepo: repoKey is required');
+  const db = getDb();
+  const cleanRepoKey = normalizeRepoKey(repoKey);
+  await setDoc(
+    doc(db, REQUESTS_COLLECTION, cleanRepoKey),
+    {
+      repoKey: cleanRepoKey,
+      requests: normalizeRequestList(requests).map((request) => ({ ...request, repoKey: cleanRepoKey })),
+      updatedBy: updatedBy || '',
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export function subscribeRequestsForRepo({ repoKey, onUpdate, onError }) {
+  if (!repoKey || typeof onUpdate !== 'function') return () => {};
+  const db = getDb();
+  const cleanRepoKey = normalizeRepoKey(repoKey);
+  return onSnapshot(
+    doc(db, REQUESTS_COLLECTION, cleanRepoKey),
+    (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        onUpdate(normalizeRequestList(data.requests));
+        return;
+      }
+      onUpdate([]);
+    },
+    (error) => {
+      if (typeof onError === 'function') onError(error);
+    },
+  );
+}
+
+export async function saveScoreRulesForRepo({ repoKey, scoreRules }) {
+  if (!repoKey) throw new Error('saveScoreRulesForRepo: repoKey is required');
+  const db = getDb();
+  await setDoc(
+    doc(db, SCORE_RULES_COLLECTION, normalizeRepoKey(repoKey)),
+    { ...scoreRules, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+}
+
+export async function getScoreRulesForRepo(repoKey) {
+  if (!repoKey) return null;
+  const db = getDb();
+  const snap = await getDoc(doc(db, SCORE_RULES_COLLECTION, normalizeRepoKey(repoKey)));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function saveWorkspace({ uid, username, repositories, activeRepoKey }) {
+  const db = getDb();
+  const docId = getWorkspaceDocId({ uid, username });
+  const cleanRepositories = normalizeRepositoryList(repositories);
+  const cleanActiveRepoKey = String(activeRepoKey || '').trim();
+  const activeRepoStillExists = cleanRepositories.some((repo) => `${repo.owner}/${repo.name}` === cleanActiveRepoKey);
+
+  await setDoc(
+    doc(db, WORKSPACES_COLLECTION, docId),
+    {
+      uid: uid || '',
+      username: username || '',
+      repositories: cleanRepositories,
+      activeRepoKey: activeRepoStillExists ? cleanActiveRepoKey : cleanRepositories[0] ? `${cleanRepositories[0].owner}/${cleanRepositories[0].name}` : '',
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function getWorkspace({ uid, username }) {
+  const db = getDb();
+  const docId = getWorkspaceDocId({ uid, username });
+  const snap = await getDoc(doc(db, WORKSPACES_COLLECTION, docId));
+
+  if (!snap.exists()) {
+    return { repositories: [], activeRepoKey: '' };
+  }
+
+  const data = snap.data();
+  const repositories = normalizeRepositoryList(data.repositories);
+  const activeRepoKey = String(data.activeRepoKey || '').trim();
+  const activeRepoStillExists = repositories.some((repo) => `${repo.owner}/${repo.name}` === activeRepoKey);
+
+  return {
+    repositories,
+    activeRepoKey: activeRepoStillExists ? activeRepoKey : repositories[0] ? `${repositories[0].owner}/${repositories[0].name}` : '',
+  };
+}
+

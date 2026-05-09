@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useStore } from '../models/StoreProvider.jsx';
+import { useControllers } from '../stores/StoreProvider.jsx';
 import LandingView from '../views/LandingView.jsx';
 
 const LoginPresenter = observer(function LoginPresenter() {
-  const store = useStore();
+  const { auth } = useControllers();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authPhase, setAuthPhase] = useState('Opening GitHub authorization...');
   const [errorMessage, setErrorMessage] = useState('');
@@ -19,7 +19,7 @@ const LoginPresenter = observer(function LoginPresenter() {
         setAuthPhase('Opening GitHub authorization...');
         setIsAuthenticating(true);
         try {
-          await store.signInWithGitHub((phase) => setAuthPhase(phase));
+          await auth.signInWithGitHub((phase) => setAuthPhase(phase));
         } catch (error) {
           setErrorMessage(error?.message ?? 'GitHub sign-in failed. Please check Firebase Auth settings.');
         } finally {
@@ -31,4 +31,3 @@ const LoginPresenter = observer(function LoginPresenter() {
 });
 
 export default LoginPresenter;
-
