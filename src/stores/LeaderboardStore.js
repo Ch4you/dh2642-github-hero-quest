@@ -3,6 +3,8 @@ import { makeAutoObservable } from 'mobx';
 export class LeaderboardStore {
   root;
   leaderboard = [];
+  leaderboardFilter = 'All time';
+  searchQuery = '';
   leaderboardUnsubscribe = null;
 
   constructor(root) {
@@ -26,6 +28,14 @@ export class LeaderboardStore {
     this.leaderboard = Array.isArray(rows) ? rows : [];
   }
 
+  setLeaderboardFilter(filter) {
+    this.leaderboardFilter = filter === 'Last 7 days' ? 'Last 7 days' : 'All time';
+  }
+
+  setSearchQuery(value) {
+    this.searchQuery = String(value || '');
+  }
+
   resetRows() {
     this.leaderboard = [];
     this.root.ui.closePlayerDrawer();
@@ -45,5 +55,7 @@ export class LeaderboardStore {
   reset() {
     this.stopLeaderboardSubscription();
     this.leaderboard = [];
+    this.leaderboardFilter = 'All time';
+    this.searchQuery = '';
   }
 }

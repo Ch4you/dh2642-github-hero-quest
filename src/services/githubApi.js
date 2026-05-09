@@ -11,7 +11,7 @@ export function explainGitHubError(error) {
     return 'Repository not found or not public. Check the owner/name or use a public repository.';
   }
   if (message.includes('(403)')) {
-    return 'GitHub API limit reached or access blocked. Try again later.';
+    return 'GitHub refused this sync because too many GitHub API requests were made in a short time. Please wait a few minutes before syncing again.';
   }
   if (message.includes('(422)')) {
     return 'GitHub rejected the query. Check that the repository name is valid and public.';
@@ -173,18 +173,14 @@ export async function getRepoStats(owner, repo, username, { since = '', until = 
   const updatedRange = dateRangeQuery('updated', since, until);
 
   const mergedPRs = await searchCount(`${repoQuery} is:pr is:merged${userPrefix}${mergedRange}`);
-  await delay(150);
+  await delay(300);
   const openPRs = await searchCount(`${repoQuery} is:pr is:open${userPrefix}${createdRange}`);
-  await delay(150);
+  await delay(300);
   const reviews = cleanUsername ? await searchCount(`${repoQuery} is:pr${reviewPrefix}${updatedRange}`) : 0;
-  await delay(150);
+  await delay(300);
   const commits = await fetchCommitCount(cleanOwner, cleanRepo, cleanUsername, { since, until });
-  await delay(150);
+  await delay(300);
   const repoMergedPRs = await searchCount(`${repoQuery} is:pr is:merged${mergedRange}`);
-  await delay(150);
-  const repoOpenPRs = await searchCount(`${repoQuery} is:pr is:open${createdRange}`);
-  await delay(150);
-  const repoCommits = await fetchCommitCount(cleanOwner, cleanRepo, '', { since, until });
 
   return {
     user: {
@@ -194,9 +190,9 @@ export async function getRepoStats(owner, repo, username, { since = '', until = 
       reviews,
     },
     repo: {
-      commits: repoCommits,
+      commits: 0,
       mergedPRs: repoMergedPRs,
-      openPRs: repoOpenPRs,
+      openPRs: 0,
     },
   };
 }

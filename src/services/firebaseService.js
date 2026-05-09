@@ -37,6 +37,7 @@ const QUESTS_COLLECTION = 'heroquest-quests';
 const REQUESTS_COLLECTION = 'heroquest-requests';
 const SCORE_RULES_COLLECTION = 'heroquest-score-rules';
 const WORKSPACES_COLLECTION = 'heroquest-workspaces';
+const REQUEST_METRICS_COLLECTION = 'heroquest-request-metrics';
 
 let dbInstance = null;
 let authInstance = null;
@@ -134,21 +135,45 @@ export async function saveUserProgress(progress) {
     typeof progress.displayName === 'string' && progress.displayName.trim()
       ? progress.displayName.trim()
       : progress.username;
+
   const payload = {
     id: progressDocId,
     username: progress.username,
     displayName,
     repoKey,
-    xp: Number(progress.xp ?? 0),
-    level: Number(progress.level ?? 1),
-    commits: Number(progress.commits ?? 0),
-    mergedPRs: Number(progress.mergedPRs ?? 0),
-    openPRs: Number(progress.openPRs ?? 0),
-    reviews: Number(progress.reviews ?? 0),
-    requestBonusXp: Number(progress.requestBonusXp ?? 0),
-    weeklyXp: Number(progress.weeklyXp ?? progress.xp ?? 0),
     updatedAt: serverTimestamp(),
   };
+
+  function setNumber(key, value) {
+    if (value !== undefined && value !== null) {
+      payload[key] = Number(value ?? 0);
+    }
+  }
+
+  function setString(key, value) {
+    if (value !== undefined && value !== null) {
+      payload[key] = String(value ?? '');
+    }
+  }
+
+  setNumber('xp', progress.xp);
+  setNumber('level', progress.level);
+  setNumber('commits', progress.commits);
+  setNumber('mergedPRs', progress.mergedPRs);
+  setNumber('openPRs', progress.openPRs);
+  setNumber('reviews', progress.reviews);
+  setNumber('requestBonusXp', progress.requestBonusXp);
+  setNumber('allTimeSyncedAtMs', progress.allTimeSyncedAtMs);
+
+  // Weekly fields are only updated when Last 7 days is explicitly synced.
+  setNumber('weeklyXp', progress.weeklyXp);
+  setNumber('weeklyCommits', progress.weeklyCommits);
+  setNumber('weeklyMergedPRs', progress.weeklyMergedPRs);
+  setNumber('weeklyOpenPRs', progress.weeklyOpenPRs);
+  setNumber('weeklyReviews', progress.weeklyReviews);
+  setString('weeklyRangeStart', progress.weeklyRangeStart);
+  setString('weeklyRangeEnd', progress.weeklyRangeEnd);
+  setNumber('weeklySyncedAtMs', progress.weeklySyncedAtMs);
 
   await setDoc(doc(db, USER_PROGRESS_COLLECTION, progressDocId), payload, { merge: true });
   await setDoc(doc(db, LEADERBOARD_COLLECTION, progressDocId), payload, { merge: true });
@@ -327,6 +352,64 @@ export async function getScoreRulesForRepo(repoKey) {
   const db = getDb();
   const snap = await getDoc(doc(db, SCORE_RULES_COLLECTION, normalizeRepoKey(repoKey)));
   return snap.exists() ? snap.data() : null;
+}
+
+
+function normalizeMetricMap(map = {}) {
+  return Object.fromEntries(
+    Object.entries(map || {}).map(([key, value]) => [String(key), Number(value ?? 0)]),
+  );
+}
+
+export async function saveRequestMetricsForRepo({ repoKey, username, valuesById, contributionsById, syncedAtMs }) {
+  if (!repoKey) throw new Error('saveRequestMetricsForRepo: repoKey is required');
+  const db = getDb();
+  const cleanRepoKey = normalizeRepoKey(repoKey);
+  const cleanUsername = String(username || '').trim() || 'unknown';
+  const metricsDocRef = doc(db, REQUEST_METRICS_COLLECTION, cleanRepoKey);
+  const snap = await getDoc(metricsDocRef);
+  const previous = snap.exists() ? snap.data() : {};
+  const previousUsers = previous.userContributionsById || {};
+  const currentSyncedAtMs = Number(syncedAtMs ?? Date.now());
+
+  await setDoc(
+    metricsDocRef,
+    {
+      repoKey: cleanRepoKey,
+      valuesById: normalizeMetricMap(valuesById),
+      syncedAtMs: currentSyncedAtMs,
+      userContributionsById: {
+        ...previousUsers,
+        [cleanUsername]: {
+          contributionsById: normalizeMetricMap(contributionsById),
+          syncedAtMs: currentSyncedAtMs,
+        },
+      },
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function getRequestMetricsForRepo({ repoKey, username }) {
+  if (!repoKey) return null;
+  const db = getDb();
+  const cleanRepoKey = normalizeRepoKey(repoKey);
+  const snap = await getDoc(doc(db, REQUEST_METRICS_COLLECTION, cleanRepoKey));
+
+  if (!snap.exists()) return null;
+
+  const data = snap.data();
+  const cleanUsername = String(username || '').trim() || 'unknown';
+  const userContribution = data.userContributionsById?.[cleanUsername] || {};
+  const teamSyncedAtMs = Number(data.syncedAtMs ?? 0);
+  const userSyncedAtMs = Number(userContribution.syncedAtMs ?? 0);
+
+  return {
+    valuesById: normalizeMetricMap(data.valuesById),
+    contributionsById: normalizeMetricMap(userContribution.contributionsById),
+    syncedAtMs: Math.min(teamSyncedAtMs || userSyncedAtMs, userSyncedAtMs || teamSyncedAtMs),
+  };
 }
 
 export async function saveWorkspace({ uid, username, repositories, activeRepoKey }) {

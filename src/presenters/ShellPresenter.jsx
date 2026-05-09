@@ -37,7 +37,7 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
       onSwitchRepository={(repoKey) => repository.switchActiveRepository(repoKey)}
       onRemoveRepository={requestRemoveRepository}
       onNavigate={store.setStep}
-      onSync={() => repository.syncActiveRepository()}
+      onSync={() => repository.syncCurrentPage()}
       canSync={canSync}
       syncCooldownRemainingMs={cooldownRemainingMs}
       profile={store.profile}

@@ -1,4 +1,4 @@
-import { getRepositories, getRepository, getRepoStats, getRequestMetricValues, getUserProfile, explainGitHubError } from '../services/githubApi.js';
+import { getRepositories, getRepository, getRepoStats, getUserProfile, explainGitHubError } from '../services/githubApi.js';
 import {
   getScoreRulesForRepo,
   getWorkspace,
@@ -9,6 +9,12 @@ import {
   saveUserProgress,
 } from '../services/firebaseService.js';
 import { DEFAULT_SCORE_RULES, calculateXp, normalizeScoreRules } from '../models/scoreRules.js';
+
+const CACHE_TTL_MS = 60_000;
+
+function isFresh(timestampMs, ttlMs = CACHE_TTL_MS) {
+  return Number.isFinite(Number(timestampMs)) && Date.now() - Number(timestampMs) < ttlMs;
+}
 
 function parseRepository(input) {
   const raw = String(input ?? '').trim().replace(/\.git$/i, '');
@@ -21,8 +27,6 @@ function parseRepository(input) {
   if (parts.length >= 2) return { owner: parts[0], name: parts[1] };
   return { owner: '', name: raw };
 }
-
-
 
 function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -169,6 +173,7 @@ export class RepositoryController {
       await this.loadRepositoryScopedSettings();
       this.leaderboardController?.startForActiveRepository();
       this.questController?.startForActiveRepository();
+      await this.backgroundSyncActiveRepository();
     }
   }
 
@@ -298,120 +303,314 @@ export class RepositoryController {
     this.store.setFlashMessage(`XP rules updated for ${targetRepoKey || 'this repository'}.`);
   }
 
-  async backgroundSyncActiveRepository() {
-    if (!this.store.repo?.owner || !this.store.repo?.name) return;
+  getCurrentUserLeaderboardRow() {
+    const username = this.store.profile.username;
+    return this.store.leaderboard.find((row) => row.username === username) ?? null;
+  }
 
-    if (!this.store.canSyncActiveRepository) {
+  applyAllTimeRowToStore(row) {
+    if (!row) return;
+    this.store.setHeroActivity({
+      commits: row.commits,
+      mergedPRs: row.mergedPRs,
+      openPRs: row.openPRs,
+      reviews: row.reviews,
+      questBonusXp: this.store.completedRequestBonusXp || row.requestBonusXp || 0,
+    });
+  }
+
+  async showSilentSpinner(phase = 'Refreshing saved data...') {
+    this.store.setLoading({ isLoading: true, phase });
+    await delay(250);
+    this.store.setLoading({ isLoading: false, phase: '' });
+  }
+
+  async saveAllTimeProgressFromActivity(activity, syncedAtMs = Date.now()) {
+    this.store.setHeroActivity({ ...activity, questBonusXp: this.store.completedRequestBonusXp });
+    this.store.setLastSyncedAt(new Date(syncedAtMs).toLocaleString());
+
+    if (!isFirebaseConfigured()) return;
+
+    await saveUserProgress({
+      username: this.store.profile.username,
+      repoKey: this.store.repoKeyString,
+      xp: this.store.hero.xp,
+      level: this.store.hero.level,
+      commits: this.store.hero.commits,
+      mergedPRs: this.store.hero.mergedPRs,
+      openPRs: this.store.hero.openPRs,
+      reviews: this.store.hero.reviews,
+      requestBonusXp: this.store.hero.questBonusXp,
+      allTimeSyncedAtMs: syncedAtMs,
+      displayName: this.store.profile.displayName || this.store.profile.username,
+    });
+
+    await saveUserData({
+      username: this.store.profile.username,
+      displayName: this.store.profile.displayName || this.store.profile.username,
+      avatarUrl: this.store.profile.avatarUrl,
+      lastRepoKey: this.store.repoKeyString,
+    });
+  }
+
+  canStartGitHubSync({ force = false, source = 'manual' } = {}) {
+    if (force) return true;
+    if (this.store.canSyncActiveRepository) return true;
+
+    if (source === 'manual') {
       const seconds = Math.ceil(this.store.syncCooldownRemainingMs / 1000);
-      this.store.addNotification(
-        `Using saved team data. GitHub sync will be available in ${seconds}s.`,
-        'Repository updated',
-        'info',
-      );
-      return;
+      const message = `Please wait ${seconds}s before syncing this repository again.`;
+      this.store.setFlashMessage(message);
+      this.store.openNotifications();
+      this.store.addNotification(message, 'Sync cooldown', 'info');
     }
+    return false;
+  }
 
-    try {
-      await this.syncActiveRepository({ source: 'background' });
-    } catch {
-      // Background sync failures are handled inside syncActiveRepository.
+  handleSyncError(error, { source = 'manual' } = {}) {
+    const message = explainGitHubError(error);
+    this.store.setSyncError(message, { source });
+    this.store.setSyncStatus('idle');
+
+    if (source === 'manual') {
+      this.store.openNotifications();
+      this.store.addNotification(message, 'Sync failed', 'error');
     }
   }
 
-  async syncActiveRepository({ force = false, source = 'manual' } = {}) {
+  async syncCurrentPage(options = {}) {
+    if (this.store.step === 'leaderboard') {
+      if (this.store.leaderboardFilter === 'Last 7 days') {
+        return this.syncWeeklyLeaderboardForActiveRepository(options);
+      }
+      return this.syncAllTimeLeaderboard(options);
+    }
+
+    if (this.store.step === 'quests') {
+      return this.syncRequestMetrics(options);
+    }
+
+    return this.syncDashboardData(options);
+  }
+
+  async backgroundSyncActiveRepository() {
+    if (!this.store.repo?.owner || !this.store.repo?.name) return;
+    if (!this.store.canSyncActiveRepository) return;
+    try {
+      await this.syncDashboardData({ source: 'background' });
+    } catch {
+      // Background sync failures are handled inside syncDashboardData.
+    }
+  }
+
+  async syncDashboardData({ force = false, source = 'manual' } = {}) {
     if (!this.store.repo.owner || !this.store.repo.name) {
       const message = 'Please connect a repository before syncing.';
       this.store.setSyncError(message, { source });
-      this.store.addNotification(message, 'Sync failed', 'error');
-      if (source === 'manual') this.store.setStep('connect');
-      return;
-    }
-
-    if (!force && !this.store.canSyncActiveRepository) {
-      const seconds = Math.ceil(this.store.syncCooldownRemainingMs / 1000);
-      const message = `Please wait ${seconds}s before syncing this repository again.`;
       if (source === 'manual') {
-        this.store.setFlashMessage(message);
-        this.store.openNotifications();
+        this.store.addNotification(message, 'Sync failed', 'error');
+        this.store.setStep('connect');
       }
-      this.store.addNotification(message, 'Sync cooldown', 'info');
-      return;
+      return false;
     }
 
+    const currentRow = this.getCurrentUserLeaderboardRow();
+    const allTimeFresh = isFresh(currentRow?.allTimeSyncedAtMs);
+    const requestCacheLoaded = await this.questController?.loadCachedRequestMetrics?.();
+    const requestsFresh = requestCacheLoaded && isFresh(this.store.requestMetricsSyncedAtMs);
+
+    if (!force && allTimeFresh && requestsFresh) {
+      this.applyAllTimeRowToStore(currentRow);
+      await this.showSilentSpinner('Refreshing saved dashboard data...');
+      return true;
+    }
+
+    if (!this.canStartGitHubSync({ force, source })) return false;
+
+    const syncRepoKey = this.store.repoKeyString;
     this.store.markSyncStarted();
-    this.store.setLoading({ isLoading: true, phase: 'Syncing GitHub contribution data...' });
+    this.store.setLoading({ isLoading: true, phase: 'Syncing dashboard data...' });
     this.store.setSyncStatus('syncing');
     this.store.setSyncError('', { source });
 
     try {
-      const stats = await getRepoStats(this.store.repo.owner, this.store.repo.name, this.store.profile.username);
+      if (!requestsFresh) {
+        await this.questController?.refreshRequestMetrics?.({ force: true });
+      }
+
+      if (!allTimeFresh) {
+        const stats = await getRepoStats(
+          this.store.repo.owner,
+          this.store.repo.name,
+          this.store.profile.username,
+        );
+        if (this.store.repoKeyString !== syncRepoKey) return false;
+        this.store.setRepoStats(stats.repo);
+        await this.saveAllTimeProgressFromActivity(stats.user, Date.now());
+      } else {
+        this.applyAllTimeRowToStore(currentRow);
+        await this.saveAllTimeProgressFromActivity(
+          {
+            commits: currentRow.commits,
+            mergedPRs: currentRow.mergedPRs,
+            openPRs: currentRow.openPRs,
+            reviews: currentRow.reviews,
+          },
+          currentRow.allTimeSyncedAtMs,
+        );
+      }
+
+      this.store.setSyncStatus('synced');
+      if (source === 'manual') {
+        this.store.setFlashMessage('Dashboard data synced.');
+        this.store.addNotification('Dashboard data synced successfully.', 'Sync complete', 'success');
+      }
+      return true;
+    } catch (error) {
+      this.handleSyncError(error, { source });
+      return false;
+    } finally {
+      this.store.setLoading({ isLoading: false, phase: '' });
+    }
+  }
+
+  async syncAllTimeLeaderboard({ force = false, source = 'manual' } = {}) {
+    const currentRow = this.getCurrentUserLeaderboardRow();
+    if (!force && isFresh(currentRow?.allTimeSyncedAtMs)) {
+      this.applyAllTimeRowToStore(currentRow);
+      await this.showSilentSpinner('Refreshing saved all-time ranking...');
+      return true;
+    }
+
+    if (!this.canStartGitHubSync({ force, source })) return false;
+
+    const syncRepoKey = this.store.repoKeyString;
+    this.store.markSyncStarted();
+    this.store.setLoading({ isLoading: true, phase: 'Syncing all-time ranking...' });
+    this.store.setSyncStatus('syncing');
+    this.store.setSyncError('', { source });
+
+    try {
+      const stats = await getRepoStats(
+        this.store.repo.owner,
+        this.store.repo.name,
+        this.store.profile.username,
+      );
+      if (this.store.repoKeyString !== syncRepoKey) return false;
+      this.store.setRepoStats(stats.repo);
+      await this.saveAllTimeProgressFromActivity(stats.user, Date.now());
+      this.store.setSyncStatus('synced');
+      if (source === 'manual') {
+        this.store.setFlashMessage('All-time ranking synced.');
+        this.store.addNotification('All-time ranking synced successfully.', 'Sync complete', 'success');
+      }
+      return true;
+    } catch (error) {
+      this.handleSyncError(error, { source });
+      return false;
+    } finally {
+      this.store.setLoading({ isLoading: false, phase: '' });
+    }
+  }
+
+  async syncWeeklyLeaderboardForActiveRepository({ force = false, source = 'manual' } = {}) {
+    const range = lastSevenDayRange();
+    const currentRow = this.getCurrentUserLeaderboardRow();
+    const weeklyFresh =
+      currentRow?.weeklyRangeStart === range.since &&
+      currentRow?.weeklyRangeEnd === range.until &&
+      isFresh(currentRow?.weeklySyncedAtMs);
+
+    if (!force && weeklyFresh) {
+      await this.showSilentSpinner('Refreshing saved weekly ranking...');
+      return true;
+    }
+
+    if (!this.canStartGitHubSync({ force, source })) return false;
+
+    const syncRepoKey = this.store.repoKeyString;
+    this.store.markSyncStarted();
+    this.store.setLoading({ isLoading: true, phase: 'Loading Last 7 days ranking...' });
+    this.store.setSyncStatus('syncing');
+    this.store.setSyncError('', { source });
+
+    try {
       const weeklyStats = await getRepoStats(
         this.store.repo.owner,
         this.store.repo.name,
         this.store.profile.username,
-        lastSevenDayRange(),
+        range,
       );
-      this.store.setRepoStats(stats.repo);
-
-      if (this.store.requests.length > 0) {
-        const requestMetricProgress = await getRequestMetricValues(
-          this.store.repo.owner,
-          this.store.repo.name,
-          this.store.profile.username,
-          this.store.requests,
-        );
-        this.store.setRequestMetricValues(requestMetricProgress.valuesById, requestMetricProgress.contributionsById);
-      } else {
-        this.store.setRequestMetricValues({}, {});
-      }
-
-      this.store.setHeroActivity({ ...stats.user, questBonusXp: this.store.completedRequestBonusXp });
-      this.store.setLastSyncedAt(new Date().toLocaleString());
-      this.store.setSyncStatus('saving');
-      this.store.setLoading({ isLoading: true, phase: 'Saving leaderboard progress...' });
+      if (this.store.repoKeyString !== syncRepoKey) return false;
 
       if (isFirebaseConfigured()) {
         await saveUserProgress({
           username: this.store.profile.username,
           repoKey: this.store.repoKeyString,
-          xp: this.store.hero.xp,
+          displayName: this.store.profile.displayName || this.store.profile.username,
           weeklyXp: calculateXp(weeklyStats.user, this.store.scoreRules),
-          level: this.store.hero.level,
-          commits: this.store.hero.commits,
-          mergedPRs: this.store.hero.mergedPRs,
-          openPRs: this.store.hero.openPRs,
-          reviews: this.store.hero.reviews,
-          requestBonusXp: this.store.hero.questBonusXp,
-          displayName: this.store.profile.displayName || this.store.profile.username,
-        });
-        await saveUserData({
-          username: this.store.profile.username,
-          displayName: this.store.profile.displayName || this.store.profile.username,
-          avatarUrl: this.store.profile.avatarUrl,
-          lastRepoKey: this.store.repoKeyString,
+          weeklyCommits: weeklyStats.user.commits,
+          weeklyMergedPRs: weeklyStats.user.mergedPRs,
+          weeklyOpenPRs: weeklyStats.user.openPRs,
+          weeklyReviews: weeklyStats.user.reviews,
+          weeklyRangeStart: range.since,
+          weeklyRangeEnd: range.until,
+          weeklySyncedAtMs: Date.now(),
         });
       }
 
       this.store.setSyncStatus('synced');
-      this.store.setFlashMessage('Synced GitHub contribution data and updated the leaderboard.');
-      this.store.addNotification('GitHub contribution data synced successfully.', 'Sync complete', 'success');
-    } catch (error) {
-      const message = explainGitHubError(error);
-      this.store.setSyncError(message, { source });
-
       if (source === 'manual') {
-        this.store.openNotifications();
-        this.store.addNotification(message, 'Sync failed', 'error');
-      } else {
-        this.store.setSyncStatus('idle');
-        this.store.addNotification(
-          `${message} Showing saved team data instead.`,
-          'Background sync skipped',
-          'info',
-        );
+        this.store.setFlashMessage('Last 7 days ranking synced.');
+        this.store.addNotification('Last 7 days ranking synced successfully.', 'Sync complete', 'success');
       }
+      return true;
+    } catch (error) {
+      this.handleSyncError(error, { source });
+      return false;
     } finally {
       this.store.setLoading({ isLoading: false, phase: '' });
     }
+  }
+
+  async syncRequestMetrics({ force = false, source = 'manual' } = {}) {
+    if (!force && isFresh(this.store.requestMetricsSyncedAtMs)) {
+      await this.showSilentSpinner('Refreshing saved request progress...');
+      return true;
+    }
+
+    const loadedCached = await this.questController?.loadCachedRequestMetrics?.();
+    if (!force && loadedCached && isFresh(this.store.requestMetricsSyncedAtMs)) {
+      await this.showSilentSpinner('Refreshing saved request progress...');
+      return true;
+    }
+
+    if (!this.canStartGitHubSync({ force, source })) return false;
+
+    this.store.markSyncStarted();
+    this.store.setLoading({ isLoading: true, phase: 'Syncing request progress...' });
+    this.store.setSyncStatus('syncing');
+    this.store.setSyncError('', { source });
+
+    try {
+      const ok = await this.questController?.refreshRequestMetrics?.({ force: true });
+      if (!ok) return false;
+      this.store.setSyncStatus('synced');
+      if (source === 'manual') {
+        this.store.setFlashMessage('Request progress synced.');
+        this.store.addNotification('Request progress synced successfully.', 'Sync complete', 'success');
+      }
+      return true;
+    } catch (error) {
+      this.handleSyncError(error, { source });
+      return false;
+    } finally {
+      this.store.setLoading({ isLoading: false, phase: '' });
+    }
+  }
+
+  // Backwards-compatible method name used by older presenters.
+  async syncActiveRepository(options = {}) {
+    return this.syncCurrentPage(options);
   }
 }
