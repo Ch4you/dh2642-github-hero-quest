@@ -55,10 +55,10 @@ function FeatureCard({ Icon, title, description }) {
   return (
     <Card className="h-full border-slate-200 bg-white shadow-sm">
       <CardContent className="p-5">
-        <div className="mb-4 inline-flex rounded-2xl bg-slate-100 p-3 text-slate-800">
-          <Icon className="h-5 w-5" />
+        <div className="mb-4 inline-flex rounded-2xl bg-slate-100 p-3 text-slate-800 titleBox">
+          <Icon className="h-5 w-5" /><h3 className="text-base font-semibold text-slate-950 pdl8">{title}</h3>
         </div>
-        <h3 className="text-base font-semibold text-slate-950">{title}</h3>
+        
         <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
       </CardContent>
     </Card>
@@ -160,22 +160,28 @@ export default function AboutView({ onNavigate }) {
       <section className="grid gap-6 pt-2 lg:grid-cols-3">
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardContent className="p-6">
-            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800"><Settings className="h-5 w-5" /></div>
-            <h2 className="text-lg font-semibold text-slate-950">Workspace and XP rules</h2>
+            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800 titleBox"><Settings className="h-5 w-5" />
+            <h2 className="text-lg font-semibold text-slate-950 pdl8">Workspace and XP rules</h2>
+            </div>
+            
             <p className="mt-2 text-sm leading-6 text-slate-600">Each repository has its own shared team XP rules. This keeps ranking fair inside a repository while allowing different projects to use different scoring priorities.</p>
           </CardContent>
         </Card>
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardContent className="p-6">
-            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800"><Users className="h-5 w-5" /></div>
-            <h2 className="text-lg font-semibold text-slate-950">Dashboard vs Team ranking</h2>
+            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800 titleBox"><Users className="h-5 w-5" />
+            <h2 className="text-lg font-semibold text-slate-950 pdl8">Dashboard vs Team ranking</h2>
+            </div>
+            
             <p className="mt-2 text-sm leading-6 text-slate-600">Dashboard shows the current repository status and request progress. Team ranking focuses on comparing synced teammates by XP for the selected time range.</p>
           </CardContent>
         </Card>
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardContent className="p-6">
-            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800"><ShieldCheck className="h-5 w-5" /></div>
-            <h2 className="text-lg font-semibold text-slate-950">Privacy and control</h2>
+            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800 titleBox"><ShieldCheck className="h-5 w-5" />
+            <h2 className="text-lg font-semibold text-slate-950 pdl8">Privacy and control</h2>
+            </div>
+            
             <p className="mt-2 text-sm leading-6 text-slate-600">Removing a repository only removes it from your workspace. It does not delete the GitHub repository or shared team data, so the repository can be added again later.</p>
           </CardContent>
         </Card>

@@ -20,3 +20,14 @@ textarea {
   font: inherit;
 }
 
+.titleBox{
+  
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+
+}
+
+.pdl8{
+  padding-left: 8px;
+}
