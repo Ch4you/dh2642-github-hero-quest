@@ -77,17 +77,13 @@ export default function QuestDashboardView({
   repoStats = {},
   requests = [],
   xpBars = [],
-  onSync,
   onSelectPlayer,
-  isLoading,
-  errorMessage,
   onOpenQuest,
   onOpenLeaderboard,
   contributors = [],
   achievements = [],
   activeMembersCount = 0,
   openRequestsCount = 0,
-  lastSyncedLabel = '',
   xpSubtitle = '',
 }) {
   const topPlayers = contributors.slice(0, 6);
@@ -95,16 +91,11 @@ export default function QuestDashboardView({
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Team dashboard</h1>
-          <p className="mt-2 text-slate-600">
-            Monitor personal contribution XP, time-bound repository requests, and teammate ranking in one place.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-          {isLoading ? 'Syncing…' : lastSyncedLabel}
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Team dashboard</h1>
+        <p className="mt-2 text-slate-600">
+          Monitor personal contribution XP, time-bound repository requests, and teammate ranking in one place.
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -114,12 +105,6 @@ export default function QuestDashboardView({
         <MetricCard title="Repository merged PRs" value={repoStats.mergedPRs ?? 0} subtitle="All-time repository metric" icon={GitPullRequest} />
       </div>
 
-      {errorMessage && (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
-          <div className="font-semibold">Sync failed</div>
-          <div className="mt-1">{errorMessage}</div>
-        </div>
-      )}
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
         <Card className="rounded-[28px] border-slate-200 shadow-sm">
@@ -209,7 +194,7 @@ export default function QuestDashboardView({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
         <Card className="rounded-[28px] border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>

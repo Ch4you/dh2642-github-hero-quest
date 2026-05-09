@@ -15,7 +15,7 @@ export class AppStore {
 
   get step() { return this.ui.step; }
   get isLoading() { return this.ui.isLoading; }
-  get errorMessage() { return this.ui.errorMessage; }
+  get errorMessage() { return this.workspace.manualSyncError; }
   get flashMessage() { return this.ui.flashMessage; }
   get loadingPhase() { return this.ui.loadingPhase; }
   get notificationsOpen() { return this.ui.notificationsOpen; }
@@ -39,6 +39,10 @@ export class AppStore {
   get activeRepoLastSyncStartedAt() { return this.workspace.activeRepoLastSyncStartedAt; }
   get syncCooldownRemainingMs() { return this.workspace.syncCooldownRemainingMs; }
   get canSyncActiveRepository() { return this.workspace.canSyncActiveRepository; }
+  get repositoryActionCooldownRemainingMs() { return this.workspace.repositoryActionCooldownRemainingMs; }
+  get canChangeRepository() { return this.workspace.canChangeRepository; }
+  get manualSyncError() { return this.workspace.manualSyncError; }
+  get backgroundSyncError() { return this.workspace.backgroundSyncError; }
   get scoreRules() { return this.workspace.scoreRules; }
   get hero() { return this.workspace.hero; }
   get repoKeyString() { return this.workspace.repoKeyString; }
@@ -61,7 +65,7 @@ export class AppStore {
 
   setStep = (step) => this.ui.setStep(step);
   setLoading = (payload) => this.ui.setLoading(payload);
-  setSyncError = (message) => this.ui.setSyncError(message);
+  setSyncError = (message, options) => this.workspace.setSyncError(message, options);
   setFlashMessage = (message) => this.ui.setFlashMessage(message);
   clearFlashMessage = () => this.ui.clearFlashMessage();
   addNotification = (text, title, type) => this.ui.addNotification(text, title, type);
@@ -94,6 +98,8 @@ export class AppStore {
   setScoreRules = (rules) => this.workspace.setScoreRules(rules);
   setLastSyncedAt = (value) => this.workspace.setLastSyncedAt(value);
   markSyncStarted = (repoKey) => this.workspace.markSyncStarted(repoKey);
+  markRepositoryActionStarted = () => this.workspace.markRepositoryActionStarted();
+  clearSyncErrors = () => this.workspace.clearSyncErrors();
 
   setRequests = (requests) => this.requestsStore.setRequests(requests);
   upsertRequest = (request) => this.requestsStore.upsertRequest(request);

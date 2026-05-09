@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useControllers, useStore } from '../stores/StoreProvider.jsx';
+import { useStore } from '../stores/StoreProvider.jsx';
 import QuestDashboardView from '../views/QuestDashboardView.jsx';
 import { getXpBreakdown } from '../models/scoreRules.js';
 import { getMetricDefinition, getMetricLabel } from '../models/QuestModel.js';
 
 const DashboardPresenter = observer(function DashboardPresenter() {
   const store = useStore();
-  const { repository } = useControllers();
 
   const requestCards = useMemo(
     () =>
@@ -74,18 +73,13 @@ const DashboardPresenter = observer(function DashboardPresenter() {
       repoStats={store.repoStats}
       requests={requestCards}
       xpBars={xpBars}
-      onSync={() => repository.syncActiveRepository()}
-      syncStatus={store.syncStatus}
       onSelectPlayer={store.selectPlayer}
-      isLoading={store.isLoading}
-      errorMessage={store.errorMessage}
       onOpenQuest={() => store.setStep('quests')}
       onOpenLeaderboard={() => store.setStep('leaderboard')}
       contributors={store.topContributors}
       achievements={achievements}
       activeMembersCount={store.activeMembersCount}
       openRequestsCount={store.activeRequestCount}
-      lastSyncedLabel={store.lastSyncedAt ? `Last synced: ${store.lastSyncedAt}` : 'Sync to load GitHub data'}
       xpSubtitle="Your GitHub contribution XP"
     />
   );
