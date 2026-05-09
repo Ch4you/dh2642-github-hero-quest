@@ -51,6 +51,7 @@ export class AppStore {
   get requests() { return this.requestsStore.requests; }
   get requestMetricsById() { return this.requestsStore.requestMetricsById; }
   get requestContributionsById() { return this.requestsStore.requestContributionsById; }
+  get requestMetricsSyncedAtMs() { return this.requestsStore.requestMetricsSyncedAtMs; }
   get requestDraft() { return this.requestsStore.requestDraft; }
   get activeRequests() { return this.requestsStore.activeRequests; }
   get activeRequestCount() { return this.requestsStore.activeRequestCount; }
@@ -60,6 +61,7 @@ export class AppStore {
   get questProgress() { return this.requestsStore.questProgress; }
 
   get leaderboard() { return this.leaderboardStore.leaderboard; }
+  get leaderboardFilter() { return this.leaderboardStore.leaderboardFilter; }
   get topContributors() { return this.leaderboardStore.topContributors; }
   get activeMembersCount() { return this.leaderboardStore.activeMembersCount; }
 
@@ -104,7 +106,7 @@ export class AppStore {
   setRequests = (requests) => this.requestsStore.setRequests(requests);
   upsertRequest = (request) => this.requestsStore.upsertRequest(request);
   removeRequest = (requestId) => this.requestsStore.removeRequest(requestId);
-  setRequestMetricValues = (valuesById, contributionsById) => this.requestsStore.setRequestMetricValues(valuesById, contributionsById);
+  setRequestMetricValues = (valuesById, contributionsById, syncedAtMs) => this.requestsStore.setRequestMetricValues(valuesById, contributionsById, syncedAtMs);
   saveRequestDraft = (payload) => this.requestsStore.saveRequestDraft(payload);
   setQuest = (quest) => this.requestsStore.setQuest(quest);
   saveQuestDraft = (payload) => this.requestsStore.saveQuestDraft(payload);
@@ -112,6 +114,7 @@ export class AppStore {
   stopQuestSubscription = () => this.requestsStore.stopQuestSubscription();
 
   setLeaderboardRows = (rows) => this.leaderboardStore.setLeaderboardRows(rows);
+  setLeaderboardFilter = (filter) => this.leaderboardStore.setLeaderboardFilter(filter);
   setLeaderboardUnsubscribe = (unsubscribe) => this.leaderboardStore.setLeaderboardUnsubscribe(unsubscribe);
   stopLeaderboardSubscription = () => this.leaderboardStore.stopLeaderboardSubscription();
 

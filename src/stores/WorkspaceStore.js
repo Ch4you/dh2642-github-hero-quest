@@ -28,8 +28,8 @@ export class WorkspaceStore {
   connectError = '';
   syncStatus = 'idle';
   lastSyncedAt = '';
-  syncCooldownMs = 30000;
-  switchCooldownMs = 10000;
+  syncCooldownMs = 60000;
+  switchCooldownMs = 20000;
   lastSyncStartedAtByRepo = {};
   lastRepositoryActionAt = 0;
   manualSyncError = '';

@@ -14,6 +14,7 @@ export class RequestStore {
   ];
   requestMetricsById = {};
   requestContributionsById = {};
+  requestMetricsSyncedAtMs = 0;
   requestDraft = null;
   questUnsubscribe = null;
 
@@ -87,9 +88,10 @@ export class RequestStore {
     this.requestContributionsById = nextContributions;
   }
 
-  setRequestMetricValues(valuesById = {}, contributionsById = {}) {
+  setRequestMetricValues(valuesById = {}, contributionsById = {}, syncedAtMs = Date.now()) {
     this.requestMetricsById = { ...valuesById };
     this.requestContributionsById = { ...contributionsById };
+    this.requestMetricsSyncedAtMs = Number(syncedAtMs ?? 0);
   }
 
   saveRequestDraft(payload) {
@@ -129,6 +131,7 @@ export class RequestStore {
     this.requests = [];
     this.requestMetricsById = {};
     this.requestContributionsById = {};
+    this.requestMetricsSyncedAtMs = 0;
     this.requestDraft = null;
   }
 
@@ -137,6 +140,7 @@ export class RequestStore {
     this.requests = [];
     this.requestMetricsById = {};
     this.requestContributionsById = {};
+    this.requestMetricsSyncedAtMs = 0;
     this.requestDraft = null;
   }
 }

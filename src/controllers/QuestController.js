@@ -1,6 +1,18 @@
 import { RequestModel } from '../models/QuestModel.js';
 import { getRequestMetricValues } from '../services/githubApi.js';
-import { isFirebaseConfigured, saveRequestsForRepo, subscribeRequestsForRepo } from '../services/firebaseService.js';
+import {
+  getRequestMetricsForRepo,
+  isFirebaseConfigured,
+  saveRequestMetricsForRepo,
+  saveRequestsForRepo,
+  subscribeRequestsForRepo,
+} from '../services/firebaseService.js';
+
+const CACHE_TTL_MS = 60_000;
+
+function isFresh(timestampMs, ttlMs = CACHE_TTL_MS) {
+  return Number.isFinite(Number(timestampMs)) && Date.now() - Number(timestampMs) < ttlMs;
+}
 
 export class QuestController {
   constructor(store) {
@@ -17,7 +29,7 @@ export class QuestController {
         onUpdate: (records = []) => {
           const requests = records.map((request) => new RequestModel({ ...request, repoKey: this.store.repoKeyString }));
           this.store.setRequests(requests);
-          void this.refreshRequestMetrics();
+          void this.loadCachedRequestMetrics();
         },
         onError: (error) => {
           this.store.addNotification(`Request sync failed: ${error?.message ?? 'unknown'}`, 'Request error', 'error');
@@ -26,6 +38,33 @@ export class QuestController {
       this.store.setQuestUnsubscribe(unsubscribe);
     } catch (error) {
       this.store.addNotification(`Request subscription failed: ${error?.message ?? 'unknown'}`, 'Request error', 'error');
+    }
+  }
+
+  async loadCachedRequestMetrics() {
+    if (!isFirebaseConfigured() || !this.store.repoKeyString) return false;
+
+    try {
+      const cached = await getRequestMetricsForRepo({
+        repoKey: this.store.repoKeyString,
+        username: this.store.profile.username,
+      });
+
+      if (!cached) return false;
+
+      this.store.setRequestMetricValues(
+        cached.valuesById,
+        cached.contributionsById,
+        cached.syncedAtMs,
+      );
+      return true;
+    } catch (error) {
+      this.store.addNotification(
+        `Saved request metrics could not load: ${error?.message ?? 'unknown'}`,
+        'Request metrics warning',
+        'error',
+      );
+      return false;
     }
   }
 
@@ -65,7 +104,7 @@ export class QuestController {
 
     this.store.upsertRequest(nextRequest);
     await this.persistRequests();
-    await this.refreshRequestMetrics();
+    await this.loadCachedRequestMetrics();
     this.store.addNotification(`Request saved for ${this.store.repoKeyString}`, 'Request saved', 'success');
     this.store.setStep('dashboard');
   }
@@ -75,30 +114,56 @@ export class QuestController {
     if (!request) return;
     this.store.removeRequest(requestId);
     await this.persistRequests();
-    await this.refreshRequestMetrics();
+    await this.loadCachedRequestMetrics();
     this.store.addNotification(`Deleted request “${request.title}”.`, 'Request deleted', 'success');
   }
 
-  async refreshRequestMetrics() {
+  async refreshRequestMetrics({ force = false } = {}) {
     if (!this.store.repoKeyString || this.store.requests.length === 0) {
-      this.store.setRequestMetricValues({}, {});
-      return;
+      this.store.setRequestMetricValues({}, {}, 0);
+      return false;
+    }
+
+    if (!force && isFresh(this.store.requestMetricsSyncedAtMs)) {
+      return true;
+    }
+
+    if (!force) {
+      const loadedCached = await this.loadCachedRequestMetrics();
+      if (loadedCached && isFresh(this.store.requestMetricsSyncedAtMs)) {
+        return true;
+      }
     }
 
     try {
+      const activeRequests = this.store.requests.filter((request) => !request.archived).slice(0, 3);
       const progress = await getRequestMetricValues(
         this.store.repo.owner,
         this.store.repo.name,
         this.store.profile.username,
-        this.store.requests,
+        activeRequests,
       );
-      this.store.setRequestMetricValues(progress.valuesById, progress.contributionsById);
+      const syncedAtMs = Date.now();
+
+      this.store.setRequestMetricValues(progress.valuesById, progress.contributionsById, syncedAtMs);
+
+      if (isFirebaseConfigured()) {
+        await saveRequestMetricsForRepo({
+          repoKey: this.store.repoKeyString,
+          username: this.store.profile.username,
+          valuesById: progress.valuesById,
+          contributionsById: progress.contributionsById,
+          syncedAtMs,
+        });
+      }
+      return true;
     } catch (error) {
       this.store.addNotification(
         `Request metrics could not refresh: ${error?.message ?? 'unknown'}`,
         'Request metrics warning',
         'error',
       );
+      return false;
     }
   }
 
