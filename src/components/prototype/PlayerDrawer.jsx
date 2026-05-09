@@ -1,29 +1,36 @@
 import { useMemo } from 'react';
-import { Flame, GitCommitHorizontal, GitPullRequest, ShieldCheck } from 'lucide-react';
+import { Award, Flame, GitCommitHorizontal, GitPullRequest, ShieldCheck } from 'lucide-react';
 import { Badge } from '../ui/badge.jsx';
 import { Avatar, AvatarFallback } from '../ui/avatar.jsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card.jsx';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet.jsx';
-import { cn } from '../ui/utils.js';
+import { getXpBreakdown } from '../../models/scoreRules.js';
+
+const badgeDescriptions = {
+  Contributor: 'Synced activity for this repository.',
+  'Merge Hero': 'Strong merged pull request contribution.',
+  'Review Guardian': 'Helped the team by reviewing pull requests.',
+  'Commit Streak': 'Maintained consistent repository activity.',
+  'Quest Finisher': 'Contributed to completed team requests.',
+};
+
+function badgeDescription(badge) {
+  return badgeDescriptions[badge] ?? 'Achievement unlocked from synced repository activity.';
+}
 
 export default function PlayerDrawer({ player, open, onOpenChange }) {
   const initials = player?.initials ?? '';
 
-  const stats = useMemo(() => {
-    if (!player) return null;
-    return {
-      commitsXp: player.commits * 5,
-      mergedXp: player.mergedPRs * 20,
-      reviewsXp: player.reviews * 10,
-      streakXp: player.streak * 5,
-    };
+  const xpBreakdown = useMemo(() => {
+    if (!player) return [];
+    return getXpBreakdown(player);
   }, [player]);
 
   if (!player) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[440px] sm:max-w-[440px] overflow-y-auto">
+      <SheetContent className="w-[440px] overflow-y-auto sm:max-w-[440px]">
         <SheetHeader>
           <div className="flex items-center gap-3 pr-8">
             <Avatar className="h-12 w-12">
@@ -77,37 +84,31 @@ export default function PlayerDrawer({ player, open, onOpenChange }) {
               <CardDescription>Transparent scoring so users understand why they rank here.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
-                <span>Commits</span>
-                <span className="font-semibold">+{stats?.commitsXp ?? 0} XP</span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
-                <span>Merged PRs</span>
-                <span className="font-semibold">+{stats?.mergedXp ?? 0} XP</span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
-                <span>Reviews</span>
-                <span className="font-semibold">+{stats?.reviewsXp ?? 0} XP</span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-violet-50 p-3 text-violet-800">
-                <span>Streak bonus</span>
-                <span className="font-semibold">+{stats?.streakXp ?? 0} XP</span>
-              </div>
+              {xpBreakdown.map((item) => (
+                <div key={item.key} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
+                  <span>{item.label}</span>
+                  <span className="font-semibold text-slate-900">+{item.xp} XP</span>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
           <Card className="rounded-3xl">
             <CardHeader>
               <CardTitle className="text-base">Badges</CardTitle>
+              <CardDescription>Badge names and meanings are shown directly, without relying on hover.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
+            <CardContent className="space-y-3">
               {player.badges.map((badge) => (
-                <Badge
-                  key={badge}
-                  className={cn('rounded-full bg-slate-900 px-3 py-1 text-white hover:bg-slate-900')}
-                >
-                  {badge}
-                </Badge>
+                <div key={badge} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-800 shadow-sm">
+                      <Award className="h-4 w-4" />
+                    </div>
+                    <Badge className="border-slate-200 bg-white text-slate-800">{badge}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm leading-5 text-slate-600">{badgeDescription(badge)}</p>
+                </div>
               ))}
             </CardContent>
           </Card>
@@ -116,4 +117,3 @@ export default function PlayerDrawer({ player, open, onOpenChange }) {
     </Sheet>
   );
 }
-

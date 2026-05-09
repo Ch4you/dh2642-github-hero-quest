@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { observer } from 'mobx-react-lite';
-import { useStore } from '../models/StoreProvider.jsx';
+import { useStore } from '../stores/StoreProvider.jsx';
 import PlayerDrawer from '../components/prototype/PlayerDrawer.jsx';
 import LoginPresenter from './LoginPresenter.jsx';
 import SetupPresenter from './SetupPresenter.jsx';
@@ -8,6 +8,7 @@ import ConnectRepoPresenter from './ConnectRepoPresenter.jsx';
 import DashboardPresenter from './DashboardPresenter.jsx';
 import LeaderboardPresenter from './LeaderboardPresenter.jsx';
 import QuestPresenter from './QuestPresenter.jsx';
+import AboutPresenter from './AboutPresenter.jsx';
 import ShellPresenter from './ShellPresenter.jsx';
 
 const shellStepFade = { duration: 0.22, ease: [0.22, 1, 0.36, 1] };
@@ -21,7 +22,7 @@ const RootPresenter = observer(function RootPresenter() {
   const store = useStore();
   const step = store.step;
   const isAuthFlow = step === 'login' || step === 'setup';
-  const isShellStep = step === 'connect' || step === 'dashboard' || step === 'leaderboard' || step === 'quests';
+  const isShellStep = step === 'connect' || step === 'dashboard' || step === 'leaderboard' || step === 'quests' || step === 'about';
 
   let shellBody = null;
   if (isShellStep) {
@@ -37,6 +38,9 @@ const RootPresenter = observer(function RootPresenter() {
         break;
       case 'quests':
         shellBody = <QuestPresenter />;
+        break;
+      case 'about':
+        shellBody = <AboutPresenter />;
         break;
       default:
         shellBody = null;

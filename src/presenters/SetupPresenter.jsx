@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useStore } from '../models/StoreProvider.jsx';
+import { useControllers, useStore } from '../stores/StoreProvider.jsx';
 import SetupView from '../views/SetupView.jsx';
 
 const SetupPresenter = observer(function SetupPresenter() {
   const store = useStore();
+  const { repository } = useControllers();
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
 
@@ -21,7 +22,7 @@ const SetupPresenter = observer(function SetupPresenter() {
         setError('');
         setPending(true);
         try {
-          await store.validateProfileAndContinue();
+          await repository.validateProfileAndContinue();
         } catch (e) {
           setError(
             e?.message?.includes('404')

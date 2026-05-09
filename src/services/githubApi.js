@@ -1,18 +1,28 @@
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN;
-
 function getHeaders() {
-  const headers = {
+  return {
     Accept: 'application/vnd.github+json',
   };
-  if (GITHUB_TOKEN) headers.Authorization = `Bearer ${GITHUB_TOKEN}`;
-  return headers;
+}
+
+export function explainGitHubError(error) {
+  const message = String(error?.message ?? error ?? '');
+
+  if (message.includes('(404)')) {
+    return 'Repository not found or not public. Check the owner/name or use a public repository.';
+  }
+  if (message.includes('(403)')) {
+    return 'GitHub API limit reached or access blocked. Try again later.';
+  }
+  if (message.includes('(422)')) {
+    return 'GitHub rejected the query. Check that the repository name is valid and public.';
+  }
+  return message || 'GitHub request failed. Check the repository and try again.';
 }
 
 async function fetchJsonOrThrow(url) {
   const response = await fetch(url, { headers: getHeaders() });
   if (!response.ok) {
-    const rateHint = response.status === 403 ? ' (possible rate limit)' : '';
-    throw new Error(`GitHub API failed (${response.status})${rateHint}`);
+    throw new Error(`GitHub API failed (${response.status})`);
   }
   return response.json();
 }
@@ -25,12 +35,14 @@ function parseLastPageFromLink(linkHeader) {
   return Number.isFinite(page) ? page : null;
 }
 
-async function fetchCommitCount(owner, repo) {
-  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1`;
+async function fetchCommitCount(owner, repo, username, { since = '', until = '' } = {}) {
+  const authorQuery = username ? `&author=${encodeURIComponent(username)}` : '';
+  const sinceQuery = since ? `&since=${encodeURIComponent(`${since}T00:00:00Z`)}` : '';
+  const untilQuery = until ? `&until=${encodeURIComponent(`${until}T23:59:59Z`)}` : '';
+  const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1${authorQuery}${sinceQuery}${untilQuery}`;
   const response = await fetch(url, { headers: getHeaders() });
   if (!response.ok) {
-    const rateHint = response.status === 403 ? ' (possible rate limit)' : '';
-    throw new Error(`GitHub commits API failed (${response.status})${rateHint}`);
+    throw new Error(`GitHub commits API failed (${response.status})`);
   }
 
   const linkHeader = response.headers.get('link');
@@ -41,13 +53,18 @@ async function fetchCommitCount(owner, repo) {
   return Array.isArray(body) ? body.length : 0;
 }
 
+async function searchCount(queryText) {
+  const url = `https://api.github.com/search/issues?q=${encodeURIComponent(queryText)}&per_page=1`;
+  const json = await fetchJsonOrThrow(url);
+  return Number(json?.total_count ?? 0);
+}
+
 export async function getUserProfile(username) {
   if (!username?.trim()) {
     throw new Error('GitHub username is required.');
   }
   const cleanUsername = username.trim();
-  const url = `https://api.github.com/users/${encodeURIComponent(cleanUsername)}`;
-  return fetchJsonOrThrow(url);
+  return fetchJsonOrThrow(`https://api.github.com/users/${encodeURIComponent(cleanUsername)}`);
 }
 
 export async function getRepositories(username) {
@@ -59,36 +76,127 @@ export async function getRepositories(username) {
   return fetchJsonOrThrow(url);
 }
 
-export async function getCommits(owner, repo) {
+export async function getRepository(owner, repo) {
   if (!owner?.trim() || !repo?.trim()) {
     throw new Error('Repository owner/name is required.');
   }
   const cleanOwner = owner.trim();
   const cleanRepo = repo.trim();
-  const url = `https://api.github.com/repos/${encodeURIComponent(cleanOwner)}/${encodeURIComponent(cleanRepo)}/commits?per_page=30`;
+  const url = `https://api.github.com/repos/${encodeURIComponent(cleanOwner)}/${encodeURIComponent(cleanRepo)}`;
   return fetchJsonOrThrow(url);
 }
 
-export async function getRepoStats(owner, repo) {
+function dateRangeQuery(field, startDate, endDate) {
+  const start = String(startDate || '').trim();
+  const end = String(endDate || '').trim();
+  if (start && end) return ` ${field}:${start}..${end}`;
+  if (start) return ` ${field}:>=${start}`;
+  if (end) return ` ${field}:<=${end}`;
+  return '';
+}
+
+async function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function getRequestMetricProgress(owner, repo, username, request) {
+  if (!owner?.trim() || !repo?.trim()) {
+    throw new Error('Repository owner/name is required before calculating request metrics.');
+  }
+
+  const cleanOwner = owner.trim();
+  const cleanRepo = repo.trim();
+  const cleanUsername = username?.trim();
+  const repoQuery = `repo:${cleanOwner}/${cleanRepo}`;
+  const startDate = request?.startDate || '';
+  const endDate = request?.endDate || '';
+
+  switch (request?.metricType) {
+    case 'repoCommits': {
+      const value = await fetchCommitCount(cleanOwner, cleanRepo, '', { since: startDate, until: endDate });
+      const contribution = cleanUsername ? await fetchCommitCount(cleanOwner, cleanRepo, cleanUsername, { since: startDate, until: endDate }) : 0;
+      return { value, contribution };
+    }
+    case 'repoOpenPRs': {
+      const range = dateRangeQuery('created', startDate, endDate);
+      const value = await searchCount(`${repoQuery} is:pr is:open${range}`);
+      const contribution = cleanUsername ? await searchCount(`${repoQuery} is:pr is:open author:${cleanUsername}${range}`) : 0;
+      return { value, contribution };
+    }
+    case 'repoReviews': {
+      const range = dateRangeQuery('updated', startDate, endDate);
+      const value = await searchCount(`${repoQuery} is:pr review:approved${range}`);
+      const contribution = cleanUsername ? await searchCount(`${repoQuery} is:pr reviewed-by:${cleanUsername}${range}`) : 0;
+      return { value, contribution };
+    }
+    case 'repoMergedPRs':
+    default: {
+      const range = dateRangeQuery('merged', startDate, endDate);
+      const value = await searchCount(`${repoQuery} is:pr is:merged${range}`);
+      const contribution = cleanUsername ? await searchCount(`${repoQuery} is:pr is:merged author:${cleanUsername}${range}`) : 0;
+      return { value, contribution };
+    }
+  }
+}
+
+export async function getRequestMetricValue(owner, repo, username, request) {
+  const progress = await getRequestMetricProgress(owner, repo, username, request);
+  return progress.value;
+}
+
+export async function getRequestMetricValues(owner, repo, username, requests = []) {
+  const valuesById = {};
+  const contributionsById = {};
+  for (const request of Array.isArray(requests) ? requests : []) {
+    if (!request?.id) continue;
+    const progress = await getRequestMetricProgress(owner, repo, username, request);
+    valuesById[request.id] = progress.value;
+    contributionsById[request.id] = progress.contribution;
+    await delay(150);
+  }
+  return { valuesById, contributionsById };
+}
+
+export async function getRepoStats(owner, repo, username, { since = '', until = '' } = {}) {
   if (!owner?.trim() || !repo?.trim()) {
     throw new Error('Repository owner/name is required before syncing.');
   }
 
   const cleanOwner = owner.trim();
   const cleanRepo = repo.trim();
-  const repoQuery = `${cleanOwner}/${cleanRepo}`;
-  const mergedUrl = `https://api.github.com/search/issues?q=repo:${encodeURIComponent(repoQuery)}+is:pr+is:merged&per_page=1`;
-  const openUrl = `https://api.github.com/search/issues?q=repo:${encodeURIComponent(repoQuery)}+is:pr+is:open&per_page=1`;
+  const cleanUsername = username?.trim();
+  const repoQuery = `repo:${cleanOwner}/${cleanRepo}`;
+  const userPrefix = cleanUsername ? ` author:${cleanUsername}` : '';
+  const reviewPrefix = cleanUsername ? ` reviewed-by:${cleanUsername}` : '';
+  const mergedRange = dateRangeQuery('merged', since, until);
+  const createdRange = dateRangeQuery('created', since, until);
+  const updatedRange = dateRangeQuery('updated', since, until);
 
-  const [mergedJson, openJson, commits] = await Promise.all([
-    fetchJsonOrThrow(mergedUrl),
-    fetchJsonOrThrow(openUrl),
-    fetchCommitCount(cleanOwner, cleanRepo),
-  ]);
+  const mergedPRs = await searchCount(`${repoQuery} is:pr is:merged${userPrefix}${mergedRange}`);
+  await delay(150);
+  const openPRs = await searchCount(`${repoQuery} is:pr is:open${userPrefix}${createdRange}`);
+  await delay(150);
+  const reviews = cleanUsername ? await searchCount(`${repoQuery} is:pr${reviewPrefix}${updatedRange}`) : 0;
+  await delay(150);
+  const commits = await fetchCommitCount(cleanOwner, cleanRepo, cleanUsername, { since, until });
+  await delay(150);
+  const repoMergedPRs = await searchCount(`${repoQuery} is:pr is:merged${mergedRange}`);
+  await delay(150);
+  const repoOpenPRs = await searchCount(`${repoQuery} is:pr is:open${createdRange}`);
+  await delay(150);
+  const repoCommits = await fetchCommitCount(cleanOwner, cleanRepo, '', { since, until });
 
   return {
-    commits: Number(commits || 0),
-    mergedPRs: Number(mergedJson?.total_count ?? 0),
-    openPRs: Number(openJson?.total_count ?? 0),
+    user: {
+      commits,
+      mergedPRs,
+      openPRs,
+      reviews,
+    },
+    repo: {
+      commits: repoCommits,
+      mergedPRs: repoMergedPRs,
+      openPRs: repoOpenPRs,
+    },
   };
 }
