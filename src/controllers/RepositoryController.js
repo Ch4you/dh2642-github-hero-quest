@@ -23,6 +23,11 @@ function parseRepository(input) {
 }
 
 
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 function lastSevenDayRange(now = new Date()) {
   const end = new Date(now);
   const start = new Date(now);
@@ -143,7 +148,7 @@ export class RepositoryController {
 
   async connectSampleRepository() {
     this.store.setRepositoryInput('https://github.com/kth-media-lab/github-hero-quest');
-    await this.connectRepositoryFromInput({ bypassCooldown: true });
+    await this.connectRepositoryFromInput();
   }
 
   selectRecentRepository(repoName) {
@@ -153,7 +158,7 @@ export class RepositoryController {
 
   async connectRecentRepository(repoName) {
     this.store.setRepositoryInput(repoName);
-    await this.connectRepositoryFromInput({ bypassCooldown: true });
+    await this.connectRepositoryFromInput();
   }
 
   async removeRepository(repoKey) {
@@ -167,7 +172,15 @@ export class RepositoryController {
     }
   }
 
-  async connectRepositoryFromInput({ bypassCooldown = false } = {}) {
+  async connectRepositoryFromInput() {
+    if (!this.store.canChangeRepository) {
+      const seconds = Math.ceil(this.store.repositoryActionCooldownRemainingMs / 1000);
+      const message = `Please wait ${seconds}s before connecting or switching repositories again.`;
+      this.store.setFlashMessage(message);
+      this.store.addNotification(message, 'Repository cooldown', 'info');
+      return;
+    }
+
     const parsed = parseRepository(this.store.repositoryInput);
     if (!parsed.owner || !parsed.name) {
       this.store.setConnectError('Use owner/repo or a full GitHub repository URL.');
@@ -180,16 +193,32 @@ export class RepositoryController {
 
     try {
       await getRepository(parsed.owner, parsed.name);
-      this.store.setActiveRepository(parsed, { verb: 'Connected' });
+
+      this.store.setActiveRepository(parsed, { notify: false });
+      this.store.markRepositoryActionStarted();
       await this.persistWorkspace();
       await this.loadRepositoryScopedSettings();
+
       this.leaderboardController?.startForActiveRepository();
       this.questController?.startForActiveRepository();
-      await this.syncActiveRepository({ force: true });
+
+      this.store.clearSyncErrors();
+      this.store.setSyncStatus('idle');
+      this.store.setLoading({ isLoading: false, phase: '' });
+
+      this.store.setFlashMessage(`Connected ${this.store.repoKeyString}. Loading saved team data.`);
+      this.store.addNotification(
+        `Connected ${this.store.repoKeyString}. Loading saved team data.`,
+        'Repository connected',
+        'success',
+      );
+
+      await delay(1200);
+      await this.backgroundSyncActiveRepository();
     } catch (error) {
       const message = explainGitHubError(error);
       this.store.setConnectError(message);
-      this.store.setSyncError(message);
+      this.store.setSyncError(message, { source: 'manual' });
       this.store.addNotification(message, 'Repository connection failed', 'error');
     } finally {
       this.store.setLoading({ isLoading: false, phase: '' });
@@ -197,6 +226,14 @@ export class RepositoryController {
   }
 
   async switchActiveRepository(repoKey) {
+    if (!this.store.canChangeRepository) {
+      const seconds = Math.ceil(this.store.repositoryActionCooldownRemainingMs / 1000);
+      const message = `Please wait ${seconds}s before switching repositories again.`;
+      this.store.setFlashMessage(message);
+      this.store.addNotification(message, 'Repository switch cooldown', 'info');
+      return;
+    }
+
     const selected = this.store.repositories.find((repo) => `${repo.owner}/${repo.name}` === repoKey);
     if (!selected) return;
     if (this.store.activeRepoKey === repoKey) {
@@ -204,12 +241,25 @@ export class RepositoryController {
       return;
     }
 
-    this.store.setActiveRepository(selected, { verb: 'Switched to' });
+    this.store.setActiveRepository(selected, { notify: false });
+    this.store.markRepositoryActionStarted();
     await this.persistWorkspace();
     await this.loadRepositoryScopedSettings();
+
     this.leaderboardController?.startForActiveRepository();
     this.questController?.startForActiveRepository();
-    await this.syncActiveRepository();
+
+    this.store.clearSyncErrors();
+    this.store.setSyncStatus('idle');
+    this.store.setFlashMessage(`Switched to ${this.store.repoKeyString}. Loading saved team data.`);
+    this.store.addNotification(
+      `Switched to ${this.store.repoKeyString}. Loading saved team data.`,
+      'Repository switched',
+      'info',
+    );
+
+    await delay(1200);
+    await this.backgroundSyncActiveRepository();
   }
 
   async loadRepositoryScopedSettings() {
@@ -248,27 +298,50 @@ export class RepositoryController {
     this.store.setFlashMessage(`XP rules updated for ${targetRepoKey || 'this repository'}.`);
   }
 
-  async syncActiveRepository({ force = false } = {}) {
+  async backgroundSyncActiveRepository() {
+    if (!this.store.repo?.owner || !this.store.repo?.name) return;
+
+    if (!this.store.canSyncActiveRepository) {
+      const seconds = Math.ceil(this.store.syncCooldownRemainingMs / 1000);
+      this.store.addNotification(
+        `Using saved team data. GitHub sync will be available in ${seconds}s.`,
+        'Repository updated',
+        'info',
+      );
+      return;
+    }
+
+    try {
+      await this.syncActiveRepository({ source: 'background' });
+    } catch {
+      // Background sync failures are handled inside syncActiveRepository.
+    }
+  }
+
+  async syncActiveRepository({ force = false, source = 'manual' } = {}) {
     if (!this.store.repo.owner || !this.store.repo.name) {
       const message = 'Please connect a repository before syncing.';
-      this.store.setSyncError(message);
+      this.store.setSyncError(message, { source });
       this.store.addNotification(message, 'Sync failed', 'error');
-      this.store.setStep('connect');
+      if (source === 'manual') this.store.setStep('connect');
       return;
     }
 
     if (!force && !this.store.canSyncActiveRepository) {
       const seconds = Math.ceil(this.store.syncCooldownRemainingMs / 1000);
       const message = `Please wait ${seconds}s before syncing this repository again.`;
+      if (source === 'manual') {
+        this.store.setFlashMessage(message);
+        this.store.openNotifications();
+      }
       this.store.addNotification(message, 'Sync cooldown', 'info');
-      this.store.openNotifications();
       return;
     }
 
     this.store.markSyncStarted();
     this.store.setLoading({ isLoading: true, phase: 'Syncing GitHub contribution data...' });
     this.store.setSyncStatus('syncing');
-    this.store.setSyncError('');
+    this.store.setSyncError('', { source });
 
     try {
       const stats = await getRepoStats(this.store.repo.owner, this.store.repo.name, this.store.profile.username);
@@ -324,9 +397,19 @@ export class RepositoryController {
       this.store.addNotification('GitHub contribution data synced successfully.', 'Sync complete', 'success');
     } catch (error) {
       const message = explainGitHubError(error);
-      this.store.setSyncError(message);
-      this.store.openNotifications();
-      this.store.addNotification(message, 'Sync failed', 'error');
+      this.store.setSyncError(message, { source });
+
+      if (source === 'manual') {
+        this.store.openNotifications();
+        this.store.addNotification(message, 'Sync failed', 'error');
+      } else {
+        this.store.setSyncStatus('idle');
+        this.store.addNotification(
+          `${message} Showing saved team data instead.`,
+          'Background sync skipped',
+          'info',
+        );
+      }
     } finally {
       this.store.setLoading({ isLoading: false, phase: '' });
     }

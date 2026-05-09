@@ -28,8 +28,12 @@ export class WorkspaceStore {
   connectError = '';
   syncStatus = 'idle';
   lastSyncedAt = '';
-  syncCooldownMs = 60000;
+  syncCooldownMs = 30000;
+  switchCooldownMs = 10000;
   lastSyncStartedAtByRepo = {};
+  lastRepositoryActionAt = 0;
+  manualSyncError = '';
+  backgroundSyncError = '';
   scoreRules = DEFAULT_SCORE_RULES;
   hero = new HeroModel({ scoreRules: DEFAULT_SCORE_RULES });
 
@@ -58,6 +62,15 @@ export class WorkspaceStore {
 
   get canSyncActiveRepository() {
     return Boolean(this.repoKeyString) && !this.root.ui.isLoading && this.syncCooldownRemainingMs <= 0;
+  }
+
+  get repositoryActionCooldownRemainingMs() {
+    const elapsed = Date.now() - this.lastRepositoryActionAt;
+    return Math.max(0, this.switchCooldownMs - elapsed);
+  }
+
+  get canChangeRepository() {
+    return this.repositoryActionCooldownRemainingMs <= 0;
   }
 
   setRepositoryInput(value) {
@@ -167,13 +180,33 @@ export class WorkspaceStore {
     this.connectError = '';
     this.syncStatus = 'idle';
     this.lastSyncedAt = '';
-    this.root.ui.clearSyncError();
+    this.clearSyncErrors();
     this.root.leaderboardStore.resetRows();
     this.root.requestsStore.resetForRepository();
   }
 
   setSyncStatus(status) {
     this.syncStatus = status;
+  }
+
+  setSyncError(message = '', { source = 'manual' } = {}) {
+    const nextMessage = message || '';
+
+    if (source === 'background') {
+      this.backgroundSyncError = nextMessage;
+      return;
+    }
+
+    this.manualSyncError = nextMessage;
+    if (nextMessage) {
+      this.syncStatus = 'error';
+    }
+  }
+
+  clearSyncErrors() {
+    this.manualSyncError = '';
+    this.backgroundSyncError = '';
+    this.root.ui.clearSyncError();
   }
 
   setHeroActivity(activity) {
@@ -205,6 +238,10 @@ export class WorkspaceStore {
     };
   }
 
+  markRepositoryActionStarted() {
+    this.lastRepositoryActionAt = Date.now();
+  }
+
   reset() {
     this.repo = { owner: '', name: '' };
     this.repoStats = { mergedPRs: 0 };
@@ -216,6 +253,9 @@ export class WorkspaceStore {
     this.syncStatus = 'idle';
     this.lastSyncedAt = '';
     this.lastSyncStartedAtByRepo = {};
+    this.lastRepositoryActionAt = 0;
+    this.manualSyncError = '';
+    this.backgroundSyncError = '';
     this.scoreRules = DEFAULT_SCORE_RULES;
     this.hero = new HeroModel({ scoreRules: DEFAULT_SCORE_RULES });
   }
