@@ -3,9 +3,13 @@ import { Button } from '../../components/ui/button.jsx';
 import { cn } from '../../components/ui/utils.js';
 import { formatDateTime } from '../shared/formatters.js';
 
-export default function TeammatesTableView({ teammates, loading = false, repoLabel, onSelectPlayer, onCopyInvite }) {
+export default function TeammatesTableView({ teammates, loading = false, error = '', repoLabel, onSelectPlayer, onCopyInvite }) {
   if (loading && !teammates.length) {
     return <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">Loading repository contributors...</div>;
+  }
+
+  if (!teammates.length && error) {
+    return <div className="rounded-2xl border border-dashed border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">Unable to load repository contributors. {error}</div>;
   }
 
   if (!teammates.length) {

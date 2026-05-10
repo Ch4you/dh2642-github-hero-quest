@@ -26,6 +26,7 @@ export class WorkspaceStore {
   repositoryContributors = [];
   repositoryContributorsSyncedAtMs = 0;
   repositoryContributorsLoading = false;
+  repositoryContributorsError = '';
   repositories = [];
   repositoryInput = '';
   recentRepositories = [];
@@ -189,6 +190,7 @@ export class WorkspaceStore {
     this.repositoryContributors = [];
     this.repositoryContributorsSyncedAtMs = 0;
     this.repositoryContributorsLoading = false;
+    this.repositoryContributorsError = '';
     this.connectError = '';
     this.syncStatus = 'idle';
     this.lastSyncedAt = '';
@@ -241,10 +243,15 @@ export class WorkspaceStore {
   setRepositoryContributors(items = [], syncedAtMs = Date.now()) {
     this.repositoryContributors = Array.isArray(items) ? items : [];
     this.repositoryContributorsSyncedAtMs = Number(syncedAtMs ?? 0);
+    this.repositoryContributorsError = '';
   }
 
   setRepositoryContributorsLoading(value) {
     this.repositoryContributorsLoading = Boolean(value);
+  }
+
+  setRepositoryContributorsError(message = '') {
+    this.repositoryContributorsError = message || '';
   }
 
   setScoreRules(rules) {
@@ -265,6 +272,7 @@ export class WorkspaceStore {
     this.repositoryContributors = [];
     this.repositoryContributorsSyncedAtMs = 0;
     this.repositoryContributorsLoading = false;
+    this.repositoryContributorsError = '';
     this.repositories = [];
     this.repositoryInput = '';
     this.recentRepositories = [];

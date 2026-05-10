@@ -21,6 +21,7 @@ import {
 import {
   fromAuthProfileDoc,
   fromMergedPullRequestDetailsDoc,
+  fromRepositoryContributorsDoc,
   fromRequestMetricsDoc,
   fromRequestsDoc,
   fromScoreRulesDoc,
@@ -31,6 +32,7 @@ import {
   normalizeRepoKey,
   toAuthProfileDoc,
   toMergedPullRequestDetailsDoc,
+  toRepositoryContributorsDoc,
   toRequestMetricsDoc,
   toRequestsDoc,
   toScoreRulesDoc,
@@ -58,6 +60,7 @@ const SCORE_RULES_COLLECTION = 'heroquest-score-rules';
 const WORKSPACES_COLLECTION = 'heroquest-workspaces';
 const REQUEST_METRICS_COLLECTION = 'heroquest-request-metrics';
 const MERGED_PR_DETAILS_COLLECTION = 'heroquest-merged-pr-details';
+const REPOSITORY_CONTRIBUTORS_COLLECTION = 'heroquest-repository-contributors';
 
 let dbInstance = null;
 let authInstance = null;
@@ -307,6 +310,29 @@ export async function getMergedPullRequestDetailsForRepo(repoKey) {
   const snap = await getDoc(doc(db, MERGED_PR_DETAILS_COLLECTION, normalizeRepoKey(repoKey)));
   if (!snap.exists()) return null;
   return fromMergedPullRequestDetailsDoc(snap.data());
+}
+
+
+export async function saveRepositoryContributorsForRepo({ repoKey, items, syncedAtMs }) {
+  if (!repoKey) throw new Error('saveRepositoryContributorsForRepo: repoKey is required');
+  const db = getDb();
+  const cleanRepoKey = normalizeRepoKey(repoKey);
+  await setDoc(
+    doc(db, REPOSITORY_CONTRIBUTORS_COLLECTION, cleanRepoKey),
+    {
+      ...toRepositoryContributorsDoc({ repoKey, items, syncedAtMs }),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function getRepositoryContributorsForRepo(repoKey) {
+  if (!repoKey) return null;
+  const db = getDb();
+  const snap = await getDoc(doc(db, REPOSITORY_CONTRIBUTORS_COLLECTION, normalizeRepoKey(repoKey)));
+  if (!snap.exists()) return null;
+  return fromRepositoryContributorsDoc(snap.data());
 }
 
 export async function saveWorkspace({ uid, username, repositories, activeRepoKey }) {

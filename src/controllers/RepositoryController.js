@@ -6,6 +6,8 @@ import {
   saveScoreRulesForRepo,
   getMergedPullRequestDetailsForRepo,
   saveMergedPullRequestDetailsForRepo,
+  getRepositoryContributorsForRepo,
+  saveRepositoryContributorsForRepo,
   saveUserData,
   saveWorkspace,
   saveUserProgress,
@@ -614,22 +616,73 @@ export class RepositoryController {
 
 
 
-  async loadRepositoryContributors({ force = false } = {}) {
+  async loadCachedRepositoryContributors(repoKey = this.store.repoKeyString) {
+    if (!repoKey || !isFirebaseConfigured()) return null;
+
+    try {
+      const cached = await getRepositoryContributorsForRepo(repoKey);
+      if (cached?.items?.length && this.store.repoKeyString === repoKey) {
+        this.store.setRepositoryContributors(cached.items, cached.syncedAtMs);
+      }
+      return cached;
+    } catch (error) {
+      this.store.setRepositoryContributorsError(`Saved contributors could not load: ${error?.message ?? 'unknown'}`);
+      return null;
+    }
+  }
+
+  async loadRepositoryContributors({ force = false, source = 'background' } = {}) {
     if (!this.store.repo?.owner || !this.store.repo?.name) return false;
-    if (!force && isFresh(this.store.repositoryContributorsSyncedAtMs)) return true;
-    if (this.store.repositoryContributorsLoading) return true;
 
     const syncRepoKey = this.store.repoKeyString;
+    const hasLocalCache = this.store.repositoryContributors.length > 0 && this.store.repositoryContributorsSyncedAtMs > 0;
+
+    if (!force && hasLocalCache && isFresh(this.store.repositoryContributorsSyncedAtMs)) {
+      this.store.setRepositoryContributorsError('');
+      return true;
+    }
+
+    const cached = !force ? await this.loadCachedRepositoryContributors(syncRepoKey) : null;
+    const hasFirebaseCache = Boolean(cached?.items?.length);
+
+    if (!force && hasFirebaseCache && isFresh(cached.syncedAtMs)) {
+      this.store.setRepositoryContributorsError('');
+      return true;
+    }
+
+    if (this.store.repositoryContributorsLoading) return hasLocalCache || hasFirebaseCache;
+
+    if (!this.canStartGitHubSync({ force, source })) {
+      return hasLocalCache || hasFirebaseCache;
+    }
+
     this.store.setRepositoryContributorsLoading(true);
+    this.store.setRepositoryContributorsError('');
 
     try {
       const contributors = await getRepositoryContributors(this.store.repo.owner, this.store.repo.name, { limit: 100 });
       if (this.store.repoKeyString !== syncRepoKey) return false;
-      this.store.setRepositoryContributors(contributors, Date.now());
+
+      const syncedAtMs = Date.now();
+      this.store.setRepositoryContributors(contributors, syncedAtMs);
+
+      if (isFirebaseConfigured()) {
+        await saveRepositoryContributorsForRepo({
+          repoKey: syncRepoKey,
+          items: contributors,
+          syncedAtMs,
+        });
+      }
+
       return true;
     } catch (error) {
-      this.store.addNotification(explainGitHubError(error), 'Contributor sync failed', 'error');
-      return false;
+      this.applyGitHubRateLimitBackoff(error);
+      const message = explainGitHubError(error);
+      this.store.setRepositoryContributorsError(message);
+      if (source === 'manual' || !hasLocalCache && !hasFirebaseCache) {
+        this.store.addNotification(message, 'Contributor sync failed', 'error');
+      }
+      return hasLocalCache || hasFirebaseCache;
     } finally {
       if (this.store.repoKeyString === syncRepoKey) {
         this.store.setRepositoryContributorsLoading(false);
