@@ -37,11 +37,13 @@ function FeatureCard({ Icon, title, text }) {
   return (
     <Card className="border-slate-200 bg-white shadow-sm">
       <CardContent className="p-5">
-        <div className="mb-4 inline-flex rounded-2xl bg-slate-100 p-3 text-slate-800">
-          <Icon className="h-5 w-5" />
+        <div className="flex items-center gap-3">
+          <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-800">
+            <Icon className="h-5 w-5" />
+          </div>
+          <h3 className="pl-1 text-base font-semibold text-slate-950">{title}</h3>
         </div>
-        <h3 className="text-base font-semibold text-slate-950">{title}</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+        <p className="mt-3 text-sm leading-6 text-slate-600">{text}</p>
       </CardContent>
     </Card>
   );

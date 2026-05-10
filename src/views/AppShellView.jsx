@@ -102,7 +102,6 @@ export default function AppShellView({
           <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
             <div className="flex flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
               <div className="min-w-0">
-                <div className="mb-1 text-sm font-medium text-slate-500">Workspace</div>
                 <HeaderRepositoryMenuView
                   repoLabel={repoLabel}
                   repositories={repositories}

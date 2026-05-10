@@ -116,7 +116,6 @@ const DashboardPresenter = observer(function DashboardPresenter() {
       repoStats={store.repoStats}
       requests={goalPreviewCards}
       xpBars={xpBars}
-      onOpenQuest={() => store.setStep('quests')}
       onOpenWorkspace={() => store.setStep('connect')}
       activeMembersCount={syncedContributorLabel}
       openRequestsCount={store.activeRequestCount}

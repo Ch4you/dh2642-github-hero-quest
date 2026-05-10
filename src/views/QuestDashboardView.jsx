@@ -23,7 +23,6 @@ export default function QuestDashboardView({
   repoStats = {},
   requests = [],
   xpBars = [],
-  onOpenQuest,
   onOpenWorkspace,
   activeMembersCount = 0,
   openRequestsCount = 0,
@@ -92,8 +91,8 @@ export default function QuestDashboardView({
           </div>
           <div className="flex items-center gap-2">
             <GoalStatusInfoView />
-            <Button onClick={onOpenQuest} variant="outline" className="rounded-2xl border-slate-200">
-              Manage goals
+            <Button onClick={() => setSummaryModal('goals')} variant="outline" className="rounded-2xl border-slate-200">
+              Active goals
             </Button>
           </div>
         </CardHeader>
