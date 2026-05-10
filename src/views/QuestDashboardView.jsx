@@ -35,6 +35,7 @@ export default function QuestDashboardView({
   mergedPullRequests = [],
   onModalOpen,
   onCopyInvite,
+  onCompleteGoal,
 }) {
   const [summaryModal, setSummaryModal] = useState(null);
   const hasRepository = Boolean(repo?.owner && repo?.name);
@@ -126,7 +127,7 @@ export default function QuestDashboardView({
       <DetailModalView type={summaryModal} title={modalTitle} onClose={() => setSummaryModal(null)}>
         {summaryModal === 'xp' && <XpSourcesView xpBars={xpBars} />}
         {summaryModal === 'teammates' && <TeammatesTableView teammates={teammates} loading={teammatesLoading} error={teammatesError} repoLabel={repoLabel} onSelectPlayer={onSelectPlayer} onCopyInvite={onCopyInvite} />}
-        {summaryModal === 'goals' && <ActiveGoalsListView goals={activeGoals} />}
+        {summaryModal === 'goals' && <ActiveGoalsListView goals={activeGoals} onComplete={onCompleteGoal} />}
         {summaryModal === 'merged' && <MergedPullRequestTableView items={mergedPullRequests} />}
       </DetailModalView>
     </div>
