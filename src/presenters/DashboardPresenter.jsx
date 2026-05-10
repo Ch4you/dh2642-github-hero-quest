@@ -44,7 +44,7 @@ function buildGoalRisk(goal) {
 
 const DashboardPresenter = observer(function DashboardPresenter() {
   const store = useStore();
-  const { repository } = useControllers();
+  const { repository, quest } = useControllers();
 
   const allGoalCards = useMemo(
     () =>
@@ -118,6 +118,10 @@ const DashboardPresenter = observer(function DashboardPresenter() {
     if (type === 'teammates') void repository.loadRepositoryContributors({ source: 'manual' });
   }
 
+  function handleCompleteGoal(goalId) {
+    void quest.completeRequest(goalId);
+  }
+
   async function copyInvite(username = '') {
     const message = buildInviteMessage(store.repoKeyString || 'this repository', username);
     try {
@@ -148,6 +152,7 @@ const DashboardPresenter = observer(function DashboardPresenter() {
       mergedPullRequests={store.mergedPullRequests}
       onModalOpen={handleModalOpen}
       onCopyInvite={copyInvite}
+      onCompleteGoal={handleCompleteGoal}
     />
   );
 });
