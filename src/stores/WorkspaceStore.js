@@ -21,6 +21,11 @@ export class WorkspaceStore {
   root;
   repo = { owner: '', name: '' };
   repoStats = { mergedPRs: 0 };
+  mergedPullRequests = [];
+  mergedPullRequestsSyncedAtMs = 0;
+  repositoryContributors = [];
+  repositoryContributorsSyncedAtMs = 0;
+  repositoryContributorsLoading = false;
   repositories = [];
   repositoryInput = '';
   recentRepositories = [];
@@ -28,10 +33,6 @@ export class WorkspaceStore {
   connectError = '';
   syncStatus = 'idle';
   lastSyncedAt = '';
-  syncCooldownMs = 60000;
-  switchCooldownMs = 20000;
-  lastSyncStartedAtByRepo = {};
-  lastRepositoryActionAt = 0;
   manualSyncError = '';
   backgroundSyncError = '';
   scoreRules = DEFAULT_SCORE_RULES;
@@ -50,27 +51,14 @@ export class WorkspaceStore {
     return this.repoKeyString;
   }
 
-  get activeRepoLastSyncStartedAt() {
-    return this.lastSyncStartedAtByRepo[this.repoKeyString] ?? 0;
-  }
-
-  get syncCooldownRemainingMs() {
-    if (!this.repoKeyString) return 0;
-    const elapsed = Date.now() - this.activeRepoLastSyncStartedAt;
-    return Math.max(0, this.syncCooldownMs - elapsed);
-  }
 
   get canSyncActiveRepository() {
-    return Boolean(this.repoKeyString) && !this.root.ui.isLoading && this.syncCooldownRemainingMs <= 0;
+    return Boolean(this.repoKeyString) && !this.root.ui.isLoading;
   }
 
-  get repositoryActionCooldownRemainingMs() {
-    const elapsed = Date.now() - this.lastRepositoryActionAt;
-    return Math.max(0, this.switchCooldownMs - elapsed);
-  }
 
   get canChangeRepository() {
-    return this.repositoryActionCooldownRemainingMs <= 0;
+    return !this.root.ui.isLoading;
   }
 
   setRepositoryInput(value) {
@@ -102,52 +90,67 @@ export class WorkspaceStore {
     const keyToRemove = String(repoKey ?? '');
     if (!keyToRemove) return false;
 
+    if (this.repositories.length <= 1) {
+      this.root.ui.setFlashMessage('Keep at least one repository connected. Add another repository before removing this one.');
+      return false;
+    }
+
     const wasActive = this.activeRepoKey === keyToRemove;
     const removedRepo = this.repositories.find((repo) => makeRepositoryKey(repo) === keyToRemove);
     this.repositories = this.repositories.filter((repo) => makeRepositoryKey(repo) !== keyToRemove);
 
-    const nextSyncMap = { ...this.lastSyncStartedAtByRepo };
-    delete nextSyncMap[keyToRemove];
-    this.lastSyncStartedAtByRepo = nextSyncMap;
 
     if (!removedRepo) return false;
 
     if (!wasActive) {
-      this.root.ui.addNotification(`Removed ${keyToRemove} from this workspace.`, 'Repository removed', 'success');
+      this.root.ui.addNotification('Repository removed successfully.', 'Repository removed', 'success');
       return false;
     }
 
     this.root.stopLeaderboardSubscription();
-    this.root.stopQuestSubscription();
+    this.root.stopRequestSubscription();
     const nextRepo = this.repositories[0] ?? { owner: '', name: '' };
     this.repo = nextRepo;
     this.resetRepositoryData();
 
     if (this.repoKeyString) {
-      this.root.ui.setStep('dashboard');
-      this.root.ui.setFlashMessage(`Removed ${keyToRemove}. Switched to ${this.repoKeyString}. Press Sync to load data.`);
-      this.root.ui.addNotification(`Removed ${keyToRemove}. Switched to ${this.repoKeyString}.`, 'Repository removed', 'success');
+      this.root.ui.addNotification('Repository removed successfully.', 'Repository removed', 'success');
     } else {
       this.root.ui.setStep('connect');
-      this.root.ui.setFlashMessage(`Removed ${keyToRemove}. Connect another repository to continue.`);
-      this.root.ui.addNotification(`Removed ${keyToRemove}. Connect another repository to continue.`, 'Repository removed', 'success');
+      this.root.ui.addNotification('Connect another repository to continue.', 'Repository removed', 'success');
     }
 
     return wasActive;
   }
 
-  setActiveRepository(repository, { notify = true, verb = 'Connected' } = {}) {
-    const nextRepo = { owner: repository?.owner ?? '', name: repository?.name ?? '' };
+
+  updateActiveRepositoryMetadata(metadata = {}) {
+    if (!this.repoKeyString) return;
+    const nextRepo = {
+      ...this.repo,
+      ...(metadata.createdAt ? { createdAt: metadata.createdAt } : {}),
+    };
+    this.repo = nextRepo;
+    this.repositories = uniqueRepositories(this.repositories.map((repository) => (
+      makeRepositoryKey(repository) === this.repoKeyString ? { ...repository, ...nextRepo } : repository
+    )));
+  }
+
+  setActiveRepository(repository, { notify = true, verb = 'Connected', navigate = true } = {}) {
+    const nextRepo = {
+      owner: repository?.owner ?? '',
+      name: repository?.name ?? '',
+      ...(repository?.createdAt ? { createdAt: repository.createdAt } : {}),
+    };
     this.root.stopLeaderboardSubscription();
-    this.root.stopQuestSubscription();
+    this.root.stopRequestSubscription();
     this.repo = nextRepo;
     this.addRepository(nextRepo);
     this.resetRepositoryData();
-    this.root.ui.setStep('dashboard');
+    if (navigate) this.root.ui.setStep('dashboard');
 
     if (notify && this.repoKeyString) {
-      this.root.ui.setFlashMessage(`${verb} ${this.repoKeyString}`);
-      this.root.ui.addNotification(`${verb} ${this.repoKeyString}`, `Repository ${verb.toLowerCase()}`);
+      this.root.ui.addNotification(`${verb} successfully.`, `Repository ${verb.toLowerCase()}`, 'success');
     }
   }
 
@@ -160,14 +163,18 @@ export class WorkspaceStore {
       };
 
     this.root.stopLeaderboardSubscription();
-    this.root.stopQuestSubscription();
+    this.root.stopRequestSubscription();
     this.repositories = cleanRepositories;
-    this.repo = { owner: activeRepository.owner || '', name: activeRepository.name || '' };
+    this.repo = {
+      owner: activeRepository.owner || '',
+      name: activeRepository.name || '',
+      ...(activeRepository.createdAt ? { createdAt: activeRepository.createdAt } : {}),
+    };
     this.resetRepositoryData();
 
     if (this.repoKeyString) {
       this.root.ui.setStep('dashboard');
-      this.root.ui.setFlashMessage(`Restored workspace for ${this.repoKeyString}. Press Sync to refresh GitHub data.`);
+      this.root.ui.setFlashMessage('Workspace restored.');
     } else if (this.root.ui.step !== 'login') {
       this.root.ui.setStep('connect');
       this.root.ui.setFlashMessage('No saved repositories yet. Connect a repository to start.');
@@ -177,6 +184,11 @@ export class WorkspaceStore {
   resetRepositoryData() {
     this.hero = new HeroModel({ scoreRules: this.scoreRules });
     this.repoStats = { mergedPRs: 0 };
+    this.mergedPullRequests = [];
+    this.mergedPullRequestsSyncedAtMs = 0;
+    this.repositoryContributors = [];
+    this.repositoryContributorsSyncedAtMs = 0;
+    this.repositoryContributorsLoading = false;
     this.connectError = '';
     this.syncStatus = 'idle';
     this.lastSyncedAt = '';
@@ -221,6 +233,20 @@ export class WorkspaceStore {
     };
   }
 
+  setMergedPullRequests(items = [], syncedAtMs = Date.now()) {
+    this.mergedPullRequests = Array.isArray(items) ? items : [];
+    this.mergedPullRequestsSyncedAtMs = Number(syncedAtMs ?? 0);
+  }
+
+  setRepositoryContributors(items = [], syncedAtMs = Date.now()) {
+    this.repositoryContributors = Array.isArray(items) ? items : [];
+    this.repositoryContributorsSyncedAtMs = Number(syncedAtMs ?? 0);
+  }
+
+  setRepositoryContributorsLoading(value) {
+    this.repositoryContributorsLoading = Boolean(value);
+  }
+
   setScoreRules(rules) {
     this.scoreRules = normalizeScoreRules(rules);
     this.hero = HeroModel.fromActivity(this.hero, this.scoreRules);
@@ -230,21 +256,15 @@ export class WorkspaceStore {
     this.lastSyncedAt = value || '';
   }
 
-  markSyncStarted(repoKey = this.repoKeyString) {
-    if (!repoKey) return;
-    this.lastSyncStartedAtByRepo = {
-      ...this.lastSyncStartedAtByRepo,
-      [repoKey]: Date.now(),
-    };
-  }
-
-  markRepositoryActionStarted() {
-    this.lastRepositoryActionAt = Date.now();
-  }
 
   reset() {
     this.repo = { owner: '', name: '' };
     this.repoStats = { mergedPRs: 0 };
+    this.mergedPullRequests = [];
+    this.mergedPullRequestsSyncedAtMs = 0;
+    this.repositoryContributors = [];
+    this.repositoryContributorsSyncedAtMs = 0;
+    this.repositoryContributorsLoading = false;
     this.repositories = [];
     this.repositoryInput = '';
     this.recentRepositories = [];
@@ -252,8 +272,6 @@ export class WorkspaceStore {
     this.connectError = '';
     this.syncStatus = 'idle';
     this.lastSyncedAt = '';
-    this.lastSyncStartedAtByRepo = {};
-    this.lastRepositoryActionAt = 0;
     this.manualSyncError = '';
     this.backgroundSyncError = '';
     this.scoreRules = DEFAULT_SCORE_RULES;

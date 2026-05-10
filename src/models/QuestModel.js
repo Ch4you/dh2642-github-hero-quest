@@ -1,26 +1,26 @@
 export const REQUEST_METRIC_TYPES = [
   {
     value: 'repoMergedPRs',
-    label: 'Team merged PRs',
-    description: 'Merged pull requests in this repository during the request date range. Bonus XP is shared by contribution.',
+    label: 'Merged PRs',
+    description: 'Merged pull requests in this repository during the goal date range. Bonus XP is shared by contribution.',
     contributionLabel: 'Your merged PRs',
   },
   {
     value: 'repoCommits',
-    label: 'Team commits',
-    description: 'Commits in this repository during the request date range. Bonus XP is shared by authored commits.',
+    label: 'Commits',
+    description: 'Commits in this repository during the goal date range. Bonus XP is shared by authored commits.',
     contributionLabel: 'Your commits',
   },
   {
     value: 'repoOpenPRs',
-    label: 'Team open PRs',
-    description: 'Open pull requests created in this repository during the request date range. Bonus XP is shared by authored PRs.',
+    label: 'Open PRs',
+    description: 'Open pull requests created in this repository during the goal date range. Bonus XP is shared by authored PRs.',
     contributionLabel: 'Your open PRs',
   },
   {
     value: 'repoReviews',
-    label: 'Team reviewed PRs',
-    description: 'Pull requests with review activity during the request date range. Bonus XP is shared by review contribution.',
+    label: 'Reviewed PRs',
+    description: 'Pull requests with review activity during the goal date range. Bonus XP is shared by review contribution.',
     contributionLabel: 'Your reviewed PRs',
   },
 ];
@@ -68,7 +68,7 @@ export class RequestModel {
     archived = false,
   } = {}) {
     this.id = String(id || makeRequestId());
-    this.title = title || 'Untitled request';
+    this.title = title || 'Untitled goal';
     this.description = description || '';
     this.metricType = REQUEST_METRIC_TYPES.some((item) => item.value === metricType) ? metricType : DEFAULT_REQUEST_METRIC;
     this.targetValue = Math.max(1, Number(targetValue || 1));
@@ -125,5 +125,3 @@ export class RequestModel {
   }
 }
 
-// Backwards-compatible alias: older files still import QuestModel during the refactor.
-export class QuestModel extends RequestModel {}

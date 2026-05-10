@@ -30,13 +30,21 @@ const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
     setScoreRuleDraft((draft) => ({ ...draft, [key]: value }));
   }
 
+  async function handleOpenRecent(repoName) {
+    const alreadyConnected = store.repositories.some((repository) => `${repository.owner}/${repository.name}` === repoName);
+    if (alreadyConnected) {
+      await repository.switchActiveRepository(repoName);
+      return;
+    }
+    await repository.connectRecentRepository(repoName);
+  }
+
   return (
     <ConnectRepoView
       repositoryInput={store.repositoryInput}
       onRepositoryInputChange={store.setRepositoryInput}
       onConnect={() => repository.connectRepositoryFromInput()}
-      onUseSample={() => repository.connectSampleRepository()}
-      onOpenRecent={(repoName) => repository.connectRecentRepository(repoName)}
+      onOpenRecent={handleOpenRecent}
       recentRepositories={store.recentRepositories}
       recentLoading={store.recentLoading}
       connectError={store.connectError}

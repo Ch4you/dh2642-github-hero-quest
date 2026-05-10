@@ -18,8 +18,6 @@ export class AppStore {
   get errorMessage() { return this.workspace.manualSyncError; }
   get flashMessage() { return this.ui.flashMessage; }
   get loadingPhase() { return this.ui.loadingPhase; }
-  get notificationsOpen() { return this.ui.notificationsOpen; }
-  get notifications() { return this.ui.notifications; }
   get selectedPlayer() { return this.ui.selectedPlayer; }
   get confirmation() { return this.ui.confirmation; }
 
@@ -28,6 +26,11 @@ export class AppStore {
 
   get repo() { return this.workspace.repo; }
   get repoStats() { return this.workspace.repoStats; }
+  get mergedPullRequests() { return this.workspace.mergedPullRequests; }
+  get mergedPullRequestsSyncedAtMs() { return this.workspace.mergedPullRequestsSyncedAtMs; }
+  get repositoryContributors() { return this.workspace.repositoryContributors; }
+  get repositoryContributorsSyncedAtMs() { return this.workspace.repositoryContributorsSyncedAtMs; }
+  get repositoryContributorsLoading() { return this.workspace.repositoryContributorsLoading; }
   get repositories() { return this.workspace.repositories; }
   get repositoryInput() { return this.workspace.repositoryInput; }
   get recentRepositories() { return this.workspace.recentRepositories; }
@@ -35,11 +38,7 @@ export class AppStore {
   get connectError() { return this.workspace.connectError; }
   get syncStatus() { return this.workspace.syncStatus; }
   get lastSyncedAt() { return this.workspace.lastSyncedAt; }
-  get syncCooldownMs() { return this.workspace.syncCooldownMs; }
-  get activeRepoLastSyncStartedAt() { return this.workspace.activeRepoLastSyncStartedAt; }
-  get syncCooldownRemainingMs() { return this.workspace.syncCooldownRemainingMs; }
   get canSyncActiveRepository() { return this.workspace.canSyncActiveRepository; }
-  get repositoryActionCooldownRemainingMs() { return this.workspace.repositoryActionCooldownRemainingMs; }
   get canChangeRepository() { return this.workspace.canChangeRepository; }
   get manualSyncError() { return this.workspace.manualSyncError; }
   get backgroundSyncError() { return this.workspace.backgroundSyncError; }
@@ -51,14 +50,13 @@ export class AppStore {
   get requests() { return this.requestsStore.requests; }
   get requestMetricsById() { return this.requestsStore.requestMetricsById; }
   get requestContributionsById() { return this.requestsStore.requestContributionsById; }
+  get allUserRequestContributionsById() { return this.requestsStore.allUserRequestContributionsById; }
   get requestMetricsSyncedAtMs() { return this.requestsStore.requestMetricsSyncedAtMs; }
   get requestDraft() { return this.requestsStore.requestDraft; }
   get activeRequests() { return this.requestsStore.activeRequests; }
   get activeRequestCount() { return this.requestsStore.activeRequestCount; }
   get requestSummaries() { return this.requestsStore.requestSummaries; }
   get completedRequestBonusXp() { return this.requestsStore.completedRequestBonusXp; }
-  get quest() { return this.requestsStore.quest; }
-  get questProgress() { return this.requestsStore.questProgress; }
 
   get leaderboard() { return this.leaderboardStore.leaderboard; }
   get leaderboardFilter() { return this.leaderboardStore.leaderboardFilter; }
@@ -71,10 +69,6 @@ export class AppStore {
   setFlashMessage = (message) => this.ui.setFlashMessage(message);
   clearFlashMessage = () => this.ui.clearFlashMessage();
   addNotification = (text, title, type) => this.ui.addNotification(text, title, type);
-  toggleNotifications = () => this.ui.toggleNotifications();
-  openNotifications = () => this.ui.openNotifications();
-  closeNotifications = () => this.ui.closeNotifications();
-  clearNotifications = () => this.ui.clearNotifications();
   selectPlayer = (player) => this.ui.selectPlayer(player);
   closePlayerDrawer = () => this.ui.closePlayerDrawer();
   requestConfirmation = (payload) => this.ui.requestConfirmation(payload);
@@ -93,25 +87,26 @@ export class AppStore {
   addRepository = (repository) => this.workspace.addRepository(repository);
   removeRepository = (repoKey) => this.workspace.removeRepository(repoKey);
   setActiveRepository = (repository, options) => this.workspace.setActiveRepository(repository, options);
+  updateActiveRepositoryMetadata = (metadata) => this.workspace.updateActiveRepositoryMetadata(metadata);
   resetRepositoryState = () => this.workspace.resetRepositoryData();
   setSyncStatus = (status) => this.workspace.setSyncStatus(status);
   setHeroActivity = (activity) => this.workspace.setHeroActivity(activity);
   setRepoStats = (stats) => this.workspace.setRepoStats(stats);
+  setMergedPullRequests = (items, syncedAtMs) => this.workspace.setMergedPullRequests(items, syncedAtMs);
+  setRepositoryContributors = (items, syncedAtMs) => this.workspace.setRepositoryContributors(items, syncedAtMs);
+  setRepositoryContributorsLoading = (value) => this.workspace.setRepositoryContributorsLoading(value);
   setScoreRules = (rules) => this.workspace.setScoreRules(rules);
   setLastSyncedAt = (value) => this.workspace.setLastSyncedAt(value);
-  markSyncStarted = (repoKey) => this.workspace.markSyncStarted(repoKey);
-  markRepositoryActionStarted = () => this.workspace.markRepositoryActionStarted();
   clearSyncErrors = () => this.workspace.clearSyncErrors();
 
   setRequests = (requests) => this.requestsStore.setRequests(requests);
   upsertRequest = (request) => this.requestsStore.upsertRequest(request);
   removeRequest = (requestId) => this.requestsStore.removeRequest(requestId);
-  setRequestMetricValues = (valuesById, contributionsById, syncedAtMs) => this.requestsStore.setRequestMetricValues(valuesById, contributionsById, syncedAtMs);
+  setRequestMetricValues = (valuesById, contributionsById, syncedAtMs, allUserContributionsById) =>
+    this.requestsStore.setRequestMetricValues(valuesById, contributionsById, syncedAtMs, allUserContributionsById);
   saveRequestDraft = (payload) => this.requestsStore.saveRequestDraft(payload);
-  setQuest = (quest) => this.requestsStore.setQuest(quest);
-  saveQuestDraft = (payload) => this.requestsStore.saveQuestDraft(payload);
-  setQuestUnsubscribe = (unsubscribe) => this.requestsStore.setQuestUnsubscribe(unsubscribe);
-  stopQuestSubscription = () => this.requestsStore.stopQuestSubscription();
+  setRequestUnsubscribe = (unsubscribe) => this.requestsStore.setRequestUnsubscribe(unsubscribe);
+  stopRequestSubscription = () => this.requestsStore.stopRequestSubscription();
 
   setLeaderboardRows = (rows) => this.leaderboardStore.setLeaderboardRows(rows);
   setLeaderboardFilter = (filter) => this.leaderboardStore.setLeaderboardFilter(filter);
@@ -120,7 +115,7 @@ export class AppStore {
 
   dispose() {
     this.stopLeaderboardSubscription();
-    this.stopQuestSubscription();
+    this.stopRequestSubscription();
   }
 
   applySignedOut() {

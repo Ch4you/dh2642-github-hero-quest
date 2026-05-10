@@ -1,26 +1,19 @@
 import { makeAutoObservable } from 'mobx';
-import { RequestModel, QuestModel } from '../models/QuestModel.js';
+import { RequestModel } from '../models/QuestModel.js';
 
 export class RequestStore {
   root;
-  requests = [
-    new RequestModel({
-      title: 'Reach 12 merged PRs before Friday',
-      description: 'Push the onboarding flow and polish leaderboard interactions before the weekly review.',
-      metricType: 'repoMergedPRs',
-      targetValue: 12,
-      rewardXp: 50,
-    }),
-  ];
+  requests = [];
   requestMetricsById = {};
   requestContributionsById = {};
+  allUserRequestContributionsById = {};
   requestMetricsSyncedAtMs = 0;
   requestDraft = null;
-  questUnsubscribe = null;
+  requestUnsubscribe = null;
 
   constructor(root) {
     this.root = root;
-    makeAutoObservable(this, { root: false, questUnsubscribe: false }, { autoBind: true });
+    makeAutoObservable(this, { root: false, requestUnsubscribe: false }, { autoBind: true });
   }
 
   get activeRequests() {
@@ -51,13 +44,8 @@ export class RequestStore {
     return this.requestSummaries.reduce((sum, request) => sum + Number(request.bonusXp ?? 0), 0);
   }
 
-  get quest() {
+  get defaultRequest() {
     return this.activeRequests[0] ?? this.requests[0] ?? new RequestModel();
-  }
-
-  get questProgress() {
-    const metricValue = this.requestMetricsById[this.quest.id] ?? this.root.workspace.repoStats.mergedPRs ?? this.root.workspace.hero.mergedPRs ?? 0;
-    return this.quest.progress(metricValue);
   }
 
   setRequests(requests) {
@@ -84,46 +72,51 @@ export class RequestStore {
     const nextContributions = { ...this.requestContributionsById };
     delete nextMetrics[id];
     delete nextContributions[id];
+    const nextAllUserContributions = Object.fromEntries(
+      Object.entries(this.allUserRequestContributionsById || {}).map(([username, record]) => {
+        const nextRecord = { ...(record || {}) };
+        const values = { ...(nextRecord.contributionsById || {}) };
+        delete values[id];
+        nextRecord.contributionsById = values;
+        return [username, nextRecord];
+      }),
+    );
     this.requestMetricsById = nextMetrics;
     this.requestContributionsById = nextContributions;
+    this.allUserRequestContributionsById = nextAllUserContributions;
   }
 
-  setRequestMetricValues(valuesById = {}, contributionsById = {}, syncedAtMs = Date.now()) {
+  setRequestMetricValues(valuesById = {}, contributionsById = {}, syncedAtMs = Date.now(), allUserContributionsById = null) {
     this.requestMetricsById = { ...valuesById };
     this.requestContributionsById = { ...contributionsById };
+    if (allUserContributionsById) {
+      this.allUserRequestContributionsById = { ...allUserContributionsById };
+    }
     this.requestMetricsSyncedAtMs = Number(syncedAtMs ?? 0);
   }
 
   saveRequestDraft(payload) {
     this.requestDraft = {
       id: payload?.id ?? '',
-      title: payload?.title ?? this.quest.title,
-      description: payload?.description ?? this.quest.description,
-      metricType: payload?.metricType ?? this.quest.metricType,
-      targetValue: Number.isFinite(Number(payload?.targetValue)) ? Number(payload.targetValue) : this.quest.targetValue,
-      startDate: payload?.startDate ?? this.quest.startDate,
-      endDate: payload?.endDate ?? this.quest.endDate,
-      rewardXp: Number.isFinite(Number(payload?.rewardXp)) ? Number(payload.rewardXp) : this.quest.rewardXp,
+      title: payload?.title ?? this.defaultRequest.title,
+      description: payload?.description ?? this.defaultRequest.description,
+      metricType: payload?.metricType ?? this.defaultRequest.metricType,
+      targetValue: Number.isFinite(Number(payload?.targetValue)) ? Number(payload.targetValue) : this.defaultRequest.targetValue,
+      startDate: payload?.startDate ?? this.defaultRequest.startDate,
+      endDate: payload?.endDate ?? this.defaultRequest.endDate,
+      rewardXp: Number.isFinite(Number(payload?.rewardXp)) ? Number(payload.rewardXp) : this.defaultRequest.rewardXp,
     };
-    this.root.ui.addNotification('Request draft saved locally', 'Draft saved');
+    this.root.ui.addNotification('Draft saved.', 'Draft saved', 'success');
   }
 
-  setQuest(quest) {
-    this.setRequests([quest instanceof QuestModel ? quest : new QuestModel(quest)]);
+  setRequestUnsubscribe(unsubscribe) {
+    this.requestUnsubscribe = typeof unsubscribe === 'function' ? unsubscribe : null;
   }
 
-  saveQuestDraft(payload) {
-    this.saveRequestDraft(payload);
-  }
-
-  setQuestUnsubscribe(unsubscribe) {
-    this.questUnsubscribe = typeof unsubscribe === 'function' ? unsubscribe : null;
-  }
-
-  stopQuestSubscription() {
-    if (this.questUnsubscribe) {
-      this.questUnsubscribe();
-      this.questUnsubscribe = null;
+  stopRequestSubscription() {
+    if (this.requestUnsubscribe) {
+      this.requestUnsubscribe();
+      this.requestUnsubscribe = null;
     }
   }
 
@@ -131,15 +124,17 @@ export class RequestStore {
     this.requests = [];
     this.requestMetricsById = {};
     this.requestContributionsById = {};
+    this.allUserRequestContributionsById = {};
     this.requestMetricsSyncedAtMs = 0;
     this.requestDraft = null;
   }
 
   reset() {
-    this.stopQuestSubscription();
+    this.stopRequestSubscription();
     this.requests = [];
     this.requestMetricsById = {};
     this.requestContributionsById = {};
+    this.allUserRequestContributionsById = {};
     this.requestMetricsSyncedAtMs = 0;
     this.requestDraft = null;
   }

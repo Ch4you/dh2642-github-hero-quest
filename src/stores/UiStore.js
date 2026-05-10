@@ -1,6 +1,6 @@
 import { makeAutoObservable } from 'mobx';
 
-const PROTECTED_STEPS = new Set(['dashboard', 'leaderboard', 'quests']);
+const PROTECTED_STEPS = new Set(['leaderboard', 'quests']);
 
 export class UiStore {
   root;
@@ -9,9 +9,6 @@ export class UiStore {
   errorMessage = '';
   flashMessage = '';
   loadingPhase = '';
-  notificationsOpen = false;
-  notifications = [];
-  nextNotificationId = 1;
   selectedPlayer = null;
   confirmation = null;
 
@@ -23,7 +20,6 @@ export class UiStore {
   setStep(step) {
     if (PROTECTED_STEPS.has(step) && !this.root.repoKeyString) {
       this.flashMessage = 'Connect a repository before opening this page.';
-      this.addNotification('Navigation blocked: connect a repository first', 'Repository required');
       this.step = 'connect';
       return;
     }
@@ -53,32 +49,11 @@ export class UiStore {
   }
 
   addNotification(text, title = 'Update', type = 'info') {
-    const notification = {
-      id: this.nextNotificationId,
-      title,
-      text,
-      type,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    this.nextNotificationId += 1;
-    this.notifications = [notification, ...this.notifications].slice(0, 8);
-  }
-
-  toggleNotifications() {
-    this.notificationsOpen = !this.notificationsOpen;
-  }
-
-  openNotifications() {
-    this.notificationsOpen = true;
-  }
-
-  closeNotifications() {
-    this.notificationsOpen = false;
-  }
-
-  clearNotifications() {
-    this.notifications = [];
-    this.notificationsOpen = false;
+    const cleanTitle = String(title || '').trim();
+    const cleanText = String(text || '').trim();
+    if (type === 'error' || type === 'success') {
+      this.flashMessage = cleanText || cleanTitle;
+    }
   }
 
   selectPlayer(player) {
@@ -89,14 +64,15 @@ export class UiStore {
     this.selectedPlayer = null;
   }
 
-  requestConfirmation({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', tone = 'danger', onConfirm }) {
+  requestConfirmation(payload = {}) {
+    if (typeof payload.onConfirm !== 'function') return;
     this.confirmation = {
-      title,
-      message,
-      confirmLabel,
-      cancelLabel,
-      tone,
-      onConfirm,
+      title: payload.title || 'Confirm action',
+      message: payload.message || '',
+      confirmLabel: payload.confirmLabel || 'Confirm',
+      cancelLabel: payload.cancelLabel || 'Cancel',
+      tone: payload.tone || 'default',
+      onConfirm: payload.onConfirm,
     };
   }
 
@@ -104,12 +80,10 @@ export class UiStore {
     this.confirmation = null;
   }
 
-  async confirmCurrentAction() {
-    const nextAction = this.confirmation?.onConfirm;
+  confirmCurrentAction() {
+    const action = this.confirmation?.onConfirm;
     this.confirmation = null;
-    if (typeof nextAction === 'function') {
-      await nextAction();
-    }
+    if (typeof action === 'function') action();
   }
 
   reset() {
@@ -118,9 +92,6 @@ export class UiStore {
     this.errorMessage = '';
     this.flashMessage = '';
     this.loadingPhase = '';
-    this.notificationsOpen = false;
-    this.notifications = [];
-    this.nextNotificationId = 1;
     this.selectedPlayer = null;
     this.confirmation = null;
   }

@@ -18,6 +18,26 @@ import {
   where,
   onSnapshot,
 } from 'firebase/firestore';
+import {
+  fromAuthProfileDoc,
+  fromMergedPullRequestDetailsDoc,
+  fromRequestMetricsDoc,
+  fromRequestsDoc,
+  fromScoreRulesDoc,
+  fromUserDoc,
+  fromUserProgressDoc,
+  fromWorkspaceDoc,
+  getWorkspaceDocId,
+  normalizeRepoKey,
+  toAuthProfileDoc,
+  toMergedPullRequestDetailsDoc,
+  toRequestMetricsDoc,
+  toRequestsDoc,
+  toScoreRulesDoc,
+  toUserDoc,
+  toUserProgressDoc,
+  toWorkspaceDoc,
+} from '../models/fireModels';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? '',
@@ -33,11 +53,11 @@ const USERS_COLLECTION = 'heroquest-users';
 const USER_PROGRESS_COLLECTION = 'heroquest-user-progress';
 const LEADERBOARD_COLLECTION = 'heroquest-leaderboard';
 const AUTH_PROFILE_COLLECTION = 'heroquest-auth-profile';
-const QUESTS_COLLECTION = 'heroquest-quests';
 const REQUESTS_COLLECTION = 'heroquest-requests';
 const SCORE_RULES_COLLECTION = 'heroquest-score-rules';
 const WORKSPACES_COLLECTION = 'heroquest-workspaces';
 const REQUEST_METRICS_COLLECTION = 'heroquest-request-metrics';
+const MERGED_PR_DETAILS_COLLECTION = 'heroquest-merged-pr-details';
 
 let dbInstance = null;
 let authInstance = null;
@@ -65,118 +85,38 @@ function getAuthInstance() {
   return authInstance;
 }
 
-function normalizeRepoKey(repoKey = 'default') {
-  return String(repoKey).trim().replaceAll('/', '__') || 'default';
-}
-
-function getWorkspaceDocId({ uid, username } = {}) {
-  const preferred = String(uid || username || '').trim();
-  if (!preferred) throw new Error('Workspace persistence requires a signed-in user.');
-  return preferred;
-}
-
-function normalizeRepository(repository) {
-  const owner = String(repository?.owner ?? '').trim();
-  const name = String(repository?.name ?? '').trim();
-  if (!owner || !name) return null;
-  return { owner, name };
-}
-
-function normalizeRepositoryList(repositories = []) {
-  const seen = new Set();
-  return (Array.isArray(repositories) ? repositories : [])
-    .map(normalizeRepository)
-    .filter(Boolean)
-    .filter((repository) => {
-      const key = `${repository.owner}/${repository.name}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-}
-
-function normalizeRequestList(requests = []) {
-  return (Array.isArray(requests) ? requests : [])
-    .map((request) => ({
-      id: String(request?.id || '').trim(),
-      title: String(request?.title || 'Untitled request').trim(),
-      description: String(request?.description || '').trim(),
-      metricType: String(request?.metricType || 'repoMergedPRs').trim(),
-      targetValue: Math.max(1, Number(request?.targetValue || 1)),
-      startDate: String(request?.startDate || '').trim(),
-      endDate: String(request?.endDate || '').trim(),
-      rewardXp: Number(request?.rewardXp ?? 50),
-      repoKey: String(request?.repoKey || '').trim(),
-      archived: Boolean(request?.archived),
-    }))
-    .filter((request) => request.id && request.title);
-}
-
 export async function saveUserData(data) {
-  if (!data?.username) throw new Error('saveUserData: data.username is required');
+  const userDoc = toUserDoc(data);
   const db = getDb();
-  await setDoc(doc(db, USERS_COLLECTION, data.username), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+  await setDoc(doc(db, USERS_COLLECTION, userDoc.username), { ...userDoc, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 export async function getUserData(username) {
   if (!username) throw new Error('getUserData: username is required');
   const db = getDb();
   const snap = await getDoc(doc(db, USERS_COLLECTION, username));
-  return snap.exists() ? snap.data() : null;
+  return snap.exists() ? fromUserDoc(snap.data()) : null;
 }
 
 export async function saveUserProgress(progress) {
   if (!progress?.username) throw new Error('saveUserProgress: progress.username is required');
-
   const db = getDb();
   const repoKey = normalizeRepoKey(progress.repoKey);
   const progressDocId = `${progress.username}__${repoKey}`;
-  const displayName =
-    typeof progress.displayName === 'string' && progress.displayName.trim()
-      ? progress.displayName.trim()
-      : progress.username;
-
+  const progressDocRef = doc(db, USER_PROGRESS_COLLECTION, progressDocId);
+  const leaderboardDocRef = doc(db, LEADERBOARD_COLLECTION, progressDocId);
+  const existingProgress = await getDoc(progressDocRef);
+  const existingLeaderboard = await getDoc(leaderboardDocRef);
+  const hasExisting = existingProgress.exists() || existingLeaderboard.exists();
   const payload = {
-    id: progressDocId,
-    username: progress.username,
-    displayName,
-    repoKey,
+    ...toUserProgressDoc(progress, { hasExisting }),
     updatedAt: serverTimestamp(),
   };
 
-  function setNumber(key, value) {
-    if (value !== undefined && value !== null) {
-      payload[key] = Number(value ?? 0);
-    }
-  }
+  if (!hasExisting) payload.createdAt = serverTimestamp();
 
-  function setString(key, value) {
-    if (value !== undefined && value !== null) {
-      payload[key] = String(value ?? '');
-    }
-  }
-
-  setNumber('xp', progress.xp);
-  setNumber('level', progress.level);
-  setNumber('commits', progress.commits);
-  setNumber('mergedPRs', progress.mergedPRs);
-  setNumber('openPRs', progress.openPRs);
-  setNumber('reviews', progress.reviews);
-  setNumber('requestBonusXp', progress.requestBonusXp);
-  setNumber('allTimeSyncedAtMs', progress.allTimeSyncedAtMs);
-
-  // Weekly fields are only updated when Last 7 days is explicitly synced.
-  setNumber('weeklyXp', progress.weeklyXp);
-  setNumber('weeklyCommits', progress.weeklyCommits);
-  setNumber('weeklyMergedPRs', progress.weeklyMergedPRs);
-  setNumber('weeklyOpenPRs', progress.weeklyOpenPRs);
-  setNumber('weeklyReviews', progress.weeklyReviews);
-  setString('weeklyRangeStart', progress.weeklyRangeStart);
-  setString('weeklyRangeEnd', progress.weeklyRangeEnd);
-  setNumber('weeklySyncedAtMs', progress.weeklySyncedAtMs);
-
-  await setDoc(doc(db, USER_PROGRESS_COLLECTION, progressDocId), payload, { merge: true });
-  await setDoc(doc(db, LEADERBOARD_COLLECTION, progressDocId), payload, { merge: true });
+  await setDoc(progressDocRef, payload, { merge: true });
+  await setDoc(leaderboardDocRef, payload, { merge: true });
 }
 
 export function subscribeLeaderboard({ repoKey = 'default', maxRows = 20, onUpdate, onError } = {}) {
@@ -193,7 +133,7 @@ export function subscribeLeaderboard({ repoKey = 'default', maxRows = 20, onUpda
     leaderboardQuery,
     (snapshot) => {
       const records = snapshot.docs
-        .map((item) => ({ id: item.id, ...item.data() }))
+        .map((item) => fromUserProgressDoc({ id: item.id, ...item.data() }))
         .sort((a, b) => Number(b.xp ?? 0) - Number(a.xp ?? 0))
         .slice(0, rows);
       onUpdate(records);
@@ -204,15 +144,13 @@ export function subscribeLeaderboard({ repoKey = 'default', maxRows = 20, onUpda
   );
 }
 
-export async function saveAuthProfile({ uid, username, displayName, avatarUrl }) {
-  if (!uid || !username?.trim()) return;
+export async function saveAuthProfile(profile) {
+  if (!profile?.uid || !profile?.username?.trim()) return;
   const db = getDb();
   await setDoc(
-    doc(db, AUTH_PROFILE_COLLECTION, uid),
+    doc(db, AUTH_PROFILE_COLLECTION, profile.uid),
     {
-      username: username.trim(),
-      displayName: displayName?.trim() || username.trim(),
-      avatarUrl: avatarUrl || '',
+      ...toAuthProfileDoc(profile),
       updatedAt: serverTimestamp(),
     },
     { merge: true },
@@ -227,18 +165,13 @@ export function subscribeAuthState(onChange) {
       onChange(null);
       return;
     }
+    const fallback = { uid: user.uid, username: '', displayName: '', avatarUrl: user.photoURL || '' };
     try {
       const db = getDb();
       const snap = await getDoc(doc(db, AUTH_PROFILE_COLLECTION, user.uid));
-      const fromDb = snap.exists() ? snap.data() : null;
-      onChange({
-        uid: user.uid,
-        username: fromDb?.username || '',
-        displayName: fromDb?.displayName || '',
-        avatarUrl: fromDb?.avatarUrl || user.photoURL || '',
-      });
+      onChange(snap.exists() ? fromAuthProfileDoc(snap.data(), fallback) : fallback);
     } catch {
-      onChange({ uid: user.uid, username: '', displayName: '', avatarUrl: user.photoURL || '' });
+      onChange(fallback);
     }
   });
 }
@@ -270,37 +203,6 @@ export async function signOutCurrentUser() {
   await signOut(getAuthInstance());
 }
 
-export async function saveQuestForRepo({ repoKey, quest, updatedBy }) {
-  if (!repoKey) throw new Error('saveQuestForRepo: repoKey is required');
-  const db = getDb();
-  const cleanRepoKey = normalizeRepoKey(repoKey);
-  await setDoc(
-    doc(db, QUESTS_COLLECTION, cleanRepoKey),
-    {
-      ...quest,
-      repoKey: cleanRepoKey,
-      updatedBy: updatedBy || '',
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-}
-
-export function subscribeQuestForRepo({ repoKey, onUpdate, onError }) {
-  if (!repoKey || typeof onUpdate !== 'function') return () => {};
-  const db = getDb();
-  const cleanRepoKey = normalizeRepoKey(repoKey);
-  return onSnapshot(
-    doc(db, QUESTS_COLLECTION, cleanRepoKey),
-    (snapshot) => {
-      if (snapshot.exists()) onUpdate(snapshot.data());
-    },
-    (error) => {
-      if (typeof onError === 'function') onError(error);
-    },
-  );
-}
-
 export async function saveRequestsForRepo({ repoKey, requests, updatedBy }) {
   if (!repoKey) throw new Error('saveRequestsForRepo: repoKey is required');
   const db = getDb();
@@ -308,9 +210,7 @@ export async function saveRequestsForRepo({ repoKey, requests, updatedBy }) {
   await setDoc(
     doc(db, REQUESTS_COLLECTION, cleanRepoKey),
     {
-      repoKey: cleanRepoKey,
-      requests: normalizeRequestList(requests).map((request) => ({ ...request, repoKey: cleanRepoKey })),
-      updatedBy: updatedBy || '',
+      ...toRequestsDoc({ repoKey, requests, updatedBy }),
       updatedAt: serverTimestamp(),
     },
     { merge: true },
@@ -325,8 +225,7 @@ export function subscribeRequestsForRepo({ repoKey, onUpdate, onError }) {
     doc(db, REQUESTS_COLLECTION, cleanRepoKey),
     (snapshot) => {
       if (snapshot.exists()) {
-        const data = snapshot.data();
-        onUpdate(normalizeRequestList(data.requests));
+        onUpdate(fromRequestsDoc(snapshot.data()));
         return;
       }
       onUpdate([]);
@@ -342,7 +241,7 @@ export async function saveScoreRulesForRepo({ repoKey, scoreRules }) {
   const db = getDb();
   await setDoc(
     doc(db, SCORE_RULES_COLLECTION, normalizeRepoKey(repoKey)),
-    { ...scoreRules, updatedAt: serverTimestamp() },
+    { ...toScoreRulesDoc(scoreRules), updatedAt: serverTimestamp() },
     { merge: true },
   );
 }
@@ -351,40 +250,28 @@ export async function getScoreRulesForRepo(repoKey) {
   if (!repoKey) return null;
   const db = getDb();
   const snap = await getDoc(doc(db, SCORE_RULES_COLLECTION, normalizeRepoKey(repoKey)));
-  return snap.exists() ? snap.data() : null;
-}
-
-
-function normalizeMetricMap(map = {}) {
-  return Object.fromEntries(
-    Object.entries(map || {}).map(([key, value]) => [String(key), Number(value ?? 0)]),
-  );
+  return snap.exists() ? fromScoreRulesDoc(snap.data()) : null;
 }
 
 export async function saveRequestMetricsForRepo({ repoKey, username, valuesById, contributionsById, syncedAtMs }) {
   if (!repoKey) throw new Error('saveRequestMetricsForRepo: repoKey is required');
   const db = getDb();
   const cleanRepoKey = normalizeRepoKey(repoKey);
-  const cleanUsername = String(username || '').trim() || 'unknown';
   const metricsDocRef = doc(db, REQUEST_METRICS_COLLECTION, cleanRepoKey);
   const snap = await getDoc(metricsDocRef);
   const previous = snap.exists() ? snap.data() : {};
-  const previousUsers = previous.userContributionsById || {};
-  const currentSyncedAtMs = Number(syncedAtMs ?? Date.now());
 
   await setDoc(
     metricsDocRef,
     {
-      repoKey: cleanRepoKey,
-      valuesById: normalizeMetricMap(valuesById),
-      syncedAtMs: currentSyncedAtMs,
-      userContributionsById: {
-        ...previousUsers,
-        [cleanUsername]: {
-          contributionsById: normalizeMetricMap(contributionsById),
-          syncedAtMs: currentSyncedAtMs,
-        },
-      },
+      ...toRequestMetricsDoc({
+        repoKey,
+        username,
+        valuesById,
+        contributionsById,
+        previousUsers: previous.userContributionsById || {},
+        syncedAtMs,
+      }),
       updatedAt: serverTimestamp(),
     },
     { merge: true },
@@ -396,36 +283,39 @@ export async function getRequestMetricsForRepo({ repoKey, username }) {
   const db = getDb();
   const cleanRepoKey = normalizeRepoKey(repoKey);
   const snap = await getDoc(doc(db, REQUEST_METRICS_COLLECTION, cleanRepoKey));
-
   if (!snap.exists()) return null;
+  return fromRequestMetricsDoc(snap.data(), username);
+}
 
-  const data = snap.data();
-  const cleanUsername = String(username || '').trim() || 'unknown';
-  const userContribution = data.userContributionsById?.[cleanUsername] || {};
-  const teamSyncedAtMs = Number(data.syncedAtMs ?? 0);
-  const userSyncedAtMs = Number(userContribution.syncedAtMs ?? 0);
+export async function saveMergedPullRequestDetailsForRepo({ repoKey, items, syncedAtMs }) {
+  if (!repoKey) throw new Error('saveMergedPullRequestDetailsForRepo: repoKey is required');
+  const db = getDb();
+  const cleanRepoKey = normalizeRepoKey(repoKey);
+  await setDoc(
+    doc(db, MERGED_PR_DETAILS_COLLECTION, cleanRepoKey),
+    {
+      ...toMergedPullRequestDetailsDoc({ repoKey, items, syncedAtMs }),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
 
-  return {
-    valuesById: normalizeMetricMap(data.valuesById),
-    contributionsById: normalizeMetricMap(userContribution.contributionsById),
-    syncedAtMs: Math.min(teamSyncedAtMs || userSyncedAtMs, userSyncedAtMs || teamSyncedAtMs),
-  };
+export async function getMergedPullRequestDetailsForRepo(repoKey) {
+  if (!repoKey) return null;
+  const db = getDb();
+  const snap = await getDoc(doc(db, MERGED_PR_DETAILS_COLLECTION, normalizeRepoKey(repoKey)));
+  if (!snap.exists()) return null;
+  return fromMergedPullRequestDetailsDoc(snap.data());
 }
 
 export async function saveWorkspace({ uid, username, repositories, activeRepoKey }) {
   const db = getDb();
   const docId = getWorkspaceDocId({ uid, username });
-  const cleanRepositories = normalizeRepositoryList(repositories);
-  const cleanActiveRepoKey = String(activeRepoKey || '').trim();
-  const activeRepoStillExists = cleanRepositories.some((repo) => `${repo.owner}/${repo.name}` === cleanActiveRepoKey);
-
   await setDoc(
     doc(db, WORKSPACES_COLLECTION, docId),
     {
-      uid: uid || '',
-      username: username || '',
-      repositories: cleanRepositories,
-      activeRepoKey: activeRepoStillExists ? cleanActiveRepoKey : cleanRepositories[0] ? `${cleanRepositories[0].owner}/${cleanRepositories[0].name}` : '',
+      ...toWorkspaceDoc({ uid, username, repositories, activeRepoKey }),
       updatedAt: serverTimestamp(),
     },
     { merge: true },
@@ -441,14 +331,5 @@ export async function getWorkspace({ uid, username }) {
     return { repositories: [], activeRepoKey: '' };
   }
 
-  const data = snap.data();
-  const repositories = normalizeRepositoryList(data.repositories);
-  const activeRepoKey = String(data.activeRepoKey || '').trim();
-  const activeRepoStillExists = repositories.some((repo) => `${repo.owner}/${repo.name}` === activeRepoKey);
-
-  return {
-    repositories,
-    activeRepoKey: activeRepoStillExists ? activeRepoKey : repositories[0] ? `${repositories[0].owner}/${repositories[0].name}` : '',
-  };
+  return fromWorkspaceDoc(snap.data());
 }
-

@@ -30,13 +30,13 @@ export default function LandingView({
             Level up your team’s GitHub collaboration.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
-            Turn commits and pull requests into XP, requests, progress insight, and a transparent leaderboard your team can actually use.
+            Turn commits and pull requests into XP, team goals, progress insight, and a transparent leaderboard your team can actually use.
           </p>
 
           <div className="mt-8 space-y-3">
             {[
               'Track contribution progress in one place',
-              'Create shared coding requests with deadlines',
+              'Create shared coding goals with deadlines',
               'Explain rankings with clear XP breakdowns',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3 text-slate-700">
@@ -50,7 +50,7 @@ export default function LandingView({
           <Card className="w-full max-w-md rounded-[28px] border-slate-200 shadow-lg shadow-slate-200/60">
             <CardHeader>
               <CardTitle className="text-2xl">Sign in to continue</CardTitle>
-              <CardDescription>Sign in first, then explicitly choose the repository you want to track.</CardDescription>
+            
             </CardHeader>
             <CardContent className="space-y-4">
               <Button
@@ -66,10 +66,7 @@ export default function LandingView({
                   {errorMessage}
                 </div>
               )}
-              <div className="flex items-center gap-3 text-xs text-slate-400">
-                <div className="h-px flex-1 bg-slate-200" /> OR <div className="h-px flex-1 bg-slate-200" />
-              </div>
-              <Input disabled placeholder="Email sign-in unavailable in prototype" className="h-12 rounded-2xl" />
+             
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 Only GitHub identity is requested. Repository activity is read from public GitHub APIs.
               </div>

@@ -4,14 +4,41 @@ function getHeaders() {
   };
 }
 
+function readRateLimitReset(response) {
+  const value = Number(response.headers.get('x-ratelimit-reset') || 0);
+  return Number.isFinite(value) && value > 0 ? value * 1000 : 0;
+}
+
+async function makeGitHubError(response, fallbackMessage) {
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+
+  const bodyMessage = typeof body?.message === 'string' ? body.message : fallbackMessage;
+  const error = new Error(`GitHub API failed (${response.status}): ${bodyMessage}`);
+  error.status = response.status;
+  error.rateLimitRemaining = Number(response.headers.get('x-ratelimit-remaining') || NaN);
+  error.rateLimitResetMs = readRateLimitReset(response);
+  error.documentationUrl = body?.documentation_url || '';
+  return error;
+}
+
+export function isGitHubRateLimitError(error) {
+  const message = String(error?.message ?? error ?? '').toLowerCase();
+  return error?.status === 403 && (message.includes('rate limit') || Number(error?.rateLimitRemaining) === 0);
+}
+
 export function explainGitHubError(error) {
   const message = String(error?.message ?? error ?? '');
 
   if (message.includes('(404)')) {
     return 'Repository not found or not public. Check the owner/name or use a public repository.';
   }
-  if (message.includes('(403)')) {
-    return 'GitHub refused this sync because too many GitHub API requests were made in a short time. Please wait a few minutes before syncing again.';
+  if (message.toLowerCase().includes('rate limit') || message.includes('(403)')) {
+    return 'GitHub rate limit reached. Showing saved data until GitHub allows more requests.';
   }
   if (message.includes('(422)')) {
     return 'GitHub rejected the query. Check that the repository name is valid and public.';
@@ -22,7 +49,7 @@ export function explainGitHubError(error) {
 async function fetchJsonOrThrow(url) {
   const response = await fetch(url, { headers: getHeaders() });
   if (!response.ok) {
-    throw new Error(`GitHub API failed (${response.status})`);
+    throw await makeGitHubError(response, 'Request failed');
   }
   return response.json();
 }
@@ -42,7 +69,7 @@ async function fetchCommitCount(owner, repo, username, { since = '', until = '' 
   const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=1${authorQuery}${sinceQuery}${untilQuery}`;
   const response = await fetch(url, { headers: getHeaders() });
   if (!response.ok) {
-    throw new Error(`GitHub commits API failed (${response.status})`);
+    throw await makeGitHubError(response, 'Commits request failed');
   }
 
   const linkHeader = response.headers.get('link');
@@ -155,6 +182,50 @@ export async function getRequestMetricValues(owner, repo, username, requests = [
     await delay(150);
   }
   return { valuesById, contributionsById };
+}
+
+
+
+export async function getRepositoryContributors(owner, repo, { limit = 100 } = {}) {
+  if (!owner?.trim() || !repo?.trim()) {
+    throw new Error('Repository owner/name is required before loading contributors.');
+  }
+  const cleanOwner = owner.trim();
+  const cleanRepo = repo.trim();
+  const perPage = Math.min(100, Math.max(1, Number(limit) || 100));
+  const url = `https://api.github.com/repos/${encodeURIComponent(cleanOwner)}/${encodeURIComponent(cleanRepo)}/contributors?per_page=${perPage}&anon=false`;
+  const rows = await fetchJsonOrThrow(url);
+  return (Array.isArray(rows) ? rows : []).map((item) => ({
+    id: String(item.id ?? item.login ?? ''),
+    username: String(item.login ?? '').trim(),
+    avatarUrl: String(item.avatar_url ?? ''),
+    profileUrl: String(item.html_url ?? ''),
+    contributions: Number(item.contributions ?? 0),
+  })).filter((item) => item.username);
+}
+
+export async function getMergedPullRequestDetails(owner, repo, { limit = 10 } = {}) {
+  if (!owner?.trim() || !repo?.trim()) {
+    throw new Error('Repository owner/name is required before loading merged pull requests.');
+  }
+
+  const cleanOwner = owner.trim();
+  const cleanRepo = repo.trim();
+  const perPage = Math.min(20, Math.max(1, Number(limit) || 10));
+  const queryText = `repo:${cleanOwner}/${cleanRepo} is:pr is:merged`;
+  const url = `https://api.github.com/search/issues?q=${encodeURIComponent(queryText)}&sort=updated&order=desc&per_page=${perPage}`;
+  const json = await fetchJsonOrThrow(url);
+
+  return (Array.isArray(json?.items) ? json.items : []).map((item, index) => ({
+    id: String(item.id ?? `${cleanOwner}/${cleanRepo}/${item.number ?? index}`),
+    index: index + 1,
+    number: Number(item.number ?? 0),
+    title: String(item.title ?? 'Untitled pull request'),
+    author: String(item.user?.login ?? 'unknown'),
+    mergedAt: item.closed_at || item.updated_at || '',
+    url: item.html_url || '',
+    description: `#${item.number ?? ''} ${item.title ?? 'Merged pull request'}`.trim(),
+  }));
 }
 
 export async function getRepoStats(owner, repo, username, { since = '', until = '' } = {}) {

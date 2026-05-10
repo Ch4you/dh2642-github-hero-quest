@@ -79,7 +79,7 @@ export class AuthController {
 
     if (!isFirebaseConfigured()) return;
 
-    onPhase?.('Saving your profile in Firebase...');
+    onPhase?.('Saving your profile...');
     try {
       await saveAuthProfile({
         uid: authData.uid,
@@ -97,8 +97,8 @@ export class AuthController {
       await this.repositoryController?.restoreWorkspace({ silent: true });
     } catch (error) {
       this.store.addNotification(
-        `Login succeeded, but Firebase profile/workspace save failed: ${error?.message ?? 'unknown'}`,
-        'Firebase warning',
+        `Login succeeded, but profile/workspace save failed: ${error?.message ?? 'unknown'}`,
+        'Profile save warning',
         'error',
       );
     }
