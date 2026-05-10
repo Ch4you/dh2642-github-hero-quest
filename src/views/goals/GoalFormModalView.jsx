@@ -104,16 +104,32 @@ export default function GoalFormModalView({
               </div>
               {dateInvalid && <p className="text-sm font-medium text-rose-600">End date must be after the start date.</p>}
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Team reward pool *</label>
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 100"
-                  value={form.rewardXp}
-                  onChange={(event) => onFieldChange?.('rewardXp', event.target.value)}
-                  className="h-12 rounded-2xl"
-                />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Goal status</label>
+                  <select
+                    disabled
+                    value={preview?.status ?? ''}
+                    className="h-12 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
+                  >
+                    <option value="">—</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="expired">Expired</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Team reward pool *</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 100"
+                    value={form.rewardXp}
+                    onChange={(event) => onFieldChange?.('rewardXp', event.target.value)}
+                    className="h-12 rounded-2xl"
+                  />
+                </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
