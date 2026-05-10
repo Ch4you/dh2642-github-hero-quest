@@ -30,7 +30,7 @@ export default function QuestDashboardView({
   teammates = [],
   teammatesLoading = false,
   onSelectPlayer,
-  allGoals = [],
+  activeGoals = [],
   mergedPullRequests = [],
   onLoadMergedPullRequests,
   onLoadRepositoryContributors,
@@ -136,7 +136,7 @@ export default function QuestDashboardView({
       <DetailModalView type={summaryModal} title={modalTitle} onClose={() => setSummaryModal(null)}>
         {summaryModal === 'xp' && <XpSourcesView xpBars={xpBars} />}
         {summaryModal === 'teammates' && <TeammatesTableView teammates={teammates} loading={teammatesLoading} repoLabel={repoLabel} onSelectPlayer={onSelectPlayer} onCopyInvite={onCopyInvite} />}
-        {summaryModal === 'goals' && <ActiveGoalsListView goals={allGoals} />}
+        {summaryModal === 'goals' && <ActiveGoalsListView goals={activeGoals} />}
         {summaryModal === 'merged' && <MergedPullRequestTableView items={mergedPullRequests} />}
       </DetailModalView>
     </div>

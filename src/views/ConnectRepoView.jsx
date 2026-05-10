@@ -3,7 +3,6 @@ import { CheckCircle2, SlidersHorizontal, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
-import { Badge } from '../components/ui/badge.jsx';
 import InfoTip from './shared/InfoTip.jsx';
 
 function repoKey(repo) {
@@ -114,8 +113,6 @@ export default function ConnectRepoView({
   onSaveScoreRules,
 }) {
   const [rulesOpen, setRulesOpen] = useState(false);
-  const hasConnectedRepo = Boolean(repo?.owner && repo?.name);
-  const connectedRepoLabel = hasConnectedRepo ? `${repo.owner}/${repo.name}` : 'Connect a repository first';
   const connectedRepositoryKeys = new Set(
     repositories.map((repository) => `${repository.owner}/${repository.name}`),
   );
@@ -191,21 +188,22 @@ export default function ConnectRepoView({
               <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
                 {recentRepositories.map((recentRepo) => {
                   const alreadyConnected = connectedRepositoryKeys.has(recentRepo.name);
+                  const isActive = recentRepo.name === activeRepoKey;
+                  const actionLabel = isActive ? 'Current' : alreadyConnected ? 'Switch' : 'Connect';
                   return (
                     <div key={recentRepo.name} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3">
                       <div className="min-w-0">
                         <div className="truncate font-medium text-slate-900" title={recentRepo.name}>{recentRepo.name}</div>
                         <div className="text-sm text-slate-500 pdt">{recentRepo.date}</div>
                       </div>
-                      {alreadyConnected ? (
-                        <Badge className="shrink-0 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-100">
-                          Connected
-                        </Badge>
-                      ) : (
-                        <Button variant="ghost" className="shrink-0 rounded-xl" onClick={() => onOpenRecent?.(recentRepo.name)}>
-                          Connect
-                        </Button>
-                      )}
+                      <Button
+                        variant={alreadyConnected ? 'outline' : 'ghost'}
+                        className="shrink-0 rounded-xl"
+                        onClick={() => onOpenRecent?.(recentRepo.name)}
+                        disabled={isActive}
+                      >
+                        {actionLabel}
+                      </Button>
                     </div>
                   );
                 })}

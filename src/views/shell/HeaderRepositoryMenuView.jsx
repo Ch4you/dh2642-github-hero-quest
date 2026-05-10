@@ -34,10 +34,9 @@ export default function HeaderRepositoryMenuView({ repoLabel, repositories = [],
           ref={menuRef}
           className="absolute left-0 top-full z-50 mt-2 w-[min(86vw,360px)] rounded-3xl border border-slate-200 bg-white p-3 shadow-xl"
         >
-          <div className="mb-2 flex items-start justify-between gap-3 px-1">
+          <div className="mb-2 flex items-start justify-between gap-3 px-1 displayVer">
             <div className="min-w-0">
               <div className="text-sm font-semibold text-slate-900">Current repository</div>
-              <div className="text-[11px] leading-4 text-slate-500">Switch or remove repositories from this workspace.</div>
             </div>
             <Button type="button" variant="outline" className="h-8 shrink-0 rounded-xl border-slate-200 px-3 text-xs" onClick={onOpenWorkspace}>
               Add repo

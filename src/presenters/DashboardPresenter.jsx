@@ -59,9 +59,14 @@ const DashboardPresenter = observer(function DashboardPresenter() {
     [store.requestSummaries],
   );
 
-  const goalPreviewCards = useMemo(
-    () => allGoalCards.filter((goal) => goal.status === 'active').sort((a, b) => latestActiveTime(b) - latestActiveTime(a)).slice(0, 1),
+  const activeGoalCards = useMemo(
+    () => allGoalCards.filter((goal) => goal.status === 'active').sort((a, b) => latestActiveTime(b) - latestActiveTime(a)),
     [allGoalCards],
+  );
+
+  const goalPreviewCards = useMemo(
+    () => activeGoalCards.slice(0, 1),
+    [activeGoalCards],
   );
 
   const xpBars = useMemo(() => {
@@ -123,7 +128,7 @@ const DashboardPresenter = observer(function DashboardPresenter() {
       teammates={teammateRows}
       teammatesLoading={store.repositoryContributorsLoading || !contributorsLoaded}
       onSelectPlayer={store.selectPlayer}
-      allGoals={allGoalCards}
+      activeGoals={activeGoalCards}
       allUserContributionsById={store.allUserRequestContributionsById}
       mergedPullRequests={store.mergedPullRequests}
       onLoadMergedPullRequests={() => repository.loadMergedPullRequestDetails()}

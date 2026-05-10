@@ -39,3 +39,8 @@ textarea {
 .pdtL{
   padding-top: 16px;
 }
+
+.displayVer{
+  display: flex;
+  align-items: center;
+}

@@ -5,14 +5,14 @@ import { formatDate } from '../shared/formatters.js';
 import { statusLabel, statusTone } from '../shared/goalStatus.js';
 
 export default function ActiveGoalsListView({ goals }) {
-  const activeGoals = goals.filter((goal) => goal.status === 'active');
+  const activeGoals = Array.isArray(goals) ? goals : [];
 
   if (!activeGoals.length) {
     return <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">No active goals right now.</div>;
   }
 
   return (
-    <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
+    <div className="max-h-[min(520px,58vh)] space-y-3 overflow-y-auto pr-1">
       {activeGoals.map((goal) => (
         <div key={goal.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

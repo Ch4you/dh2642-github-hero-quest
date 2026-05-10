@@ -67,6 +67,31 @@ export class LeaderboardController {
     this.store = store;
   }
 
+  applyCurrentUserRow(players) {
+    const username = String(this.store.profile.username || '').trim();
+    if (!username) return;
+    const current = players.find((player) => player.username === username);
+    if (!current) return;
+
+    this.store.setHeroActivity({
+      commits: current.commits,
+      mergedPRs: current.mergedPRs,
+      openPRs: current.openPRs,
+      reviews: current.reviews,
+      questBonusXp: current.questBonusXp || current.requestBonusXp || 0,
+    });
+
+    if (current.allTimeSyncedAtMs) {
+      this.store.setLastSyncedAt(new Date(current.allTimeSyncedAtMs).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }));
+    }
+  }
+
   startForActiveRepository() {
     this.store.stopLeaderboardSubscription();
     if (!isFirebaseConfigured() || !this.store.repoKeyString) return;
@@ -75,7 +100,11 @@ export class LeaderboardController {
       const unsubscribe = subscribeLeaderboard({
         repoKey: this.store.repoKeyString,
         maxRows: 50,
-        onUpdate: (records) => this.store.setLeaderboardRows(records.map(mapFirebaseRecordToPlayer)),
+        onUpdate: (records) => {
+          const players = records.map(mapFirebaseRecordToPlayer);
+          this.store.setLeaderboardRows(players);
+          this.applyCurrentUserRow(players);
+        },
         onError: (error) => {
           this.store.addNotification(
             `Leaderboard sync failed: ${error?.message ?? 'unknown'}`,
