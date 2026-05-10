@@ -66,6 +66,7 @@ export class RequestModel {
     rewardXp = 50,
     repoKey = '',
     archived = false,
+    manuallyCompleted = false,
   } = {}) {
     this.id = String(id || makeRequestId());
     this.title = title || 'Untitled goal';
@@ -77,6 +78,7 @@ export class RequestModel {
     this.rewardXp = Number(rewardXp || 50);
     this.repoKey = repoKey || '';
     this.archived = Boolean(archived);
+    this.manuallyCompleted = Boolean(manuallyCompleted);
   }
 
   progress(value = 0) {
@@ -88,6 +90,7 @@ export class RequestModel {
 
   status(value = 0, now = new Date()) {
     if (this.archived) return 'archived';
+    if (this.manuallyCompleted) return 'completed';
     const progress = this.progress(value);
     if (progress.percentage >= 100) return 'completed';
 
@@ -121,6 +124,7 @@ export class RequestModel {
       rewardXp: this.rewardXp,
       repoKey: this.repoKey,
       archived: this.archived,
+      manuallyCompleted: this.manuallyCompleted,
     };
   }
 }
