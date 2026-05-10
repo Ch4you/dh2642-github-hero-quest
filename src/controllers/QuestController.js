@@ -118,6 +118,15 @@ export class QuestController {
     this.store.addNotification('Goal deleted.', 'Goal deleted', 'success');
   }
 
+  async completeRequest(requestId) {
+    const request = this.store.requests.find((item) => item.id === requestId);
+    if (!request) return;
+    const updated = new RequestModel({ ...request.toJSON(), manuallyCompleted: true });
+    this.store.upsertRequest(updated);
+    await this.persistRequests();
+    this.store.addNotification('Goal marked as complete.', 'Goal completed', 'success');
+  }
+
   async refreshRequestMetrics({ force = false } = {}) {
     if (!this.store.repoKeyString || this.store.requests.length === 0) {
       this.store.setRequestMetricValues({}, {}, 0);
