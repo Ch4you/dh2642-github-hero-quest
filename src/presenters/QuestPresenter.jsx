@@ -167,11 +167,13 @@ const QuestPresenter = observer(function QuestPresenter() {
   async function saveRequestAndClose() {
     if (!formValid) return;
     const editing = Boolean(form.id);
-    if (editing && !isEditableStatus(preview.status)) {
+    if (!isEditableStatus(preview.status)) {
       store.requestConfirmation({
         title: `Save as ${preview.status} goal?`,
-        message: `This update changes the goal status to ${preview.status}. After saving it, the goal can still be deleted but can no longer be edited.`,
-        confirmLabel: 'Save goal',
+        message: editing
+          ? `This update changes the goal status to ${preview.status}. After saving it, the goal can still be deleted but can no longer be edited.`
+          : `This goal will be created with status "${preview.status}". It can still be deleted but cannot be edited after saving.`,
+        confirmLabel: editing ? 'Save goal' : 'Create goal',
         onConfirm: () => {
           void persistCurrentForm();
         },
