@@ -47,7 +47,6 @@ const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
       onOpenRecent={handleOpenRecent}
       recentRepositories={store.recentRepositories}
       recentLoading={store.recentLoading}
-      connectError={store.connectError}
       repo={store.repo}
       repositories={store.repositories}
       activeRepoKey={store.activeRepoKey}

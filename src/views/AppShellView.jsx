@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from 'react';
-import StatusPill from '../components/common/StatusPill.jsx';
 import { ChevronDown, HelpCircle, LogOut, Medal, RefreshCw, Settings, Target, Trophy, UserCircle2 } from 'lucide-react';
 import { Button } from '../components/ui/button.jsx';
 import { Avatar, AvatarFallback } from '../components/ui/avatar.jsx';
@@ -47,10 +46,10 @@ export default function AppShellView({
   onSync,
   canSync = true,
   onSignOut,
-  syncStatus,
   isLoading,
   loadingPhase,
   flashMessage,
+  flashType = 'info',
   confirmation,
   onCancelConfirmation,
   onConfirmConfirmation,
@@ -121,7 +120,6 @@ export default function AppShellView({
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <StatusPill status={syncStatus} />
                 <Button
                   onClick={onSync}
                   variant="outline"
@@ -177,7 +175,16 @@ export default function AppShellView({
           )}
 
           {flashMessage && (
-            <div className="fixed left-1/2 top-6 z-50 w-[min(92vw,520px)] -translate-x-1/2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-center text-sm font-medium text-slate-800 shadow-2xl">
+            <div
+              className={cn(
+                'fixed left-1/2 top-6 z-50 w-[min(92vw,520px)] -translate-x-1/2 rounded-2xl border px-5 py-3 text-center text-sm font-medium shadow-2xl',
+                flashType === 'error'
+                  ? 'border-rose-200 bg-rose-50 text-rose-700'
+                  : flashType === 'success'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-slate-200 bg-white text-slate-800',
+              )}
+            >
               {flashMessage}
             </div>
           )}
