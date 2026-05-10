@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Flame, GitPullRequest, Star, Target, Users } from 'lucide-react';
 import MetricCard from '../components/common/MetricCard.jsx';
 import { Badge } from '../components/ui/badge.jsx';
@@ -32,28 +32,17 @@ export default function QuestDashboardView({
   onSelectPlayer,
   activeGoals = [],
   mergedPullRequests = [],
-  onLoadMergedPullRequests,
-  onLoadRepositoryContributors,
+  onModalOpen,
   onCopyInvite,
 }) {
   const [summaryModal, setSummaryModal] = useState(null);
   const hasRepository = Boolean(repo?.owner && repo?.name);
   const repoLabel = hasRepository ? `${repo.owner}/${repo.name}` : '';
 
-  useEffect(() => {
-    if (hasRepository) {
-      void onLoadRepositoryContributors?.();
-    }
-  }, [hasRepository, repoLabel]);
-
-  useEffect(() => {
-    if (hasRepository && summaryModal === 'merged') {
-      void onLoadMergedPullRequests?.();
-    }
-    if (hasRepository && summaryModal === 'teammates') {
-      void onLoadRepositoryContributors?.();
-    }
-  }, [hasRepository, summaryModal]);
+  function openModal(type) {
+    setSummaryModal(type);
+    onModalOpen?.(type);
+  }
 
   if (!hasRepository) return <RepositoryRequiredOverlayView onOpenWorkspace={onOpenWorkspace} />;
 
@@ -72,10 +61,10 @@ export default function QuestDashboardView({
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard title="Your XP" value={hero.xp} subtitle={xpSubtitle} icon={Star} onClick={() => setSummaryModal('xp')} />
-            <MetricCard title="Synced teammates" value={String(activeMembersCount)} subtitle="Synced users / contributors" icon={Users} onClick={() => setSummaryModal('teammates')} />
-            <MetricCard title="Active goals" value={String(openRequestsCount)} subtitle="In current date range" icon={Target} onClick={() => setSummaryModal('goals')} />
-            <MetricCard title="Repository merged PRs" value={repoStats.mergedPRs ?? 0} subtitle="Current synced total" icon={GitPullRequest} onClick={() => setSummaryModal('merged')} />
+            <MetricCard title="Your XP" value={hero.xp} subtitle={xpSubtitle} icon={Star} onClick={() => openModal('xp')} />
+            <MetricCard title="Synced teammates" value={String(activeMembersCount)} subtitle="Synced users / contributors" icon={Users} onClick={() => openModal('teammates')} />
+            <MetricCard title="Active goals" value={String(openRequestsCount)} subtitle="In current date range" icon={Target} onClick={() => openModal('goals')} />
+            <MetricCard title="Repository merged PRs" value={repoStats.mergedPRs ?? 0} subtitle="Current synced total" icon={GitPullRequest} onClick={() => openModal('merged')} />
           </div>
         </CardContent>
       </Card>
@@ -88,7 +77,7 @@ export default function QuestDashboardView({
           </div>
           <div className="flex items-center gap-2">
             <GoalStatusInfoView />
-            <Button onClick={() => setSummaryModal('goals')} variant="outline" className="rounded-2xl border-slate-200">
+            <Button onClick={() => openModal('goals')} variant="outline" className="rounded-2xl border-slate-200">
               Active goals
             </Button>
           </div>

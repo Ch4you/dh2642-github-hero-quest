@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useControllers, useStore } from '../stores/StoreProvider.jsx';
 import QuestDashboardView from '../views/QuestDashboardView.jsx';
@@ -104,6 +104,20 @@ const DashboardPresenter = observer(function DashboardPresenter() {
   const totalContributorCount = contributorsLoaded ? teammateRows.length : 0;
   const syncedContributorLabel = contributorsLoaded ? `${syncedContributorCount}/${totalContributorCount}` : 'Loading…';
 
+  const repoLabel = store.repoKeyString;
+
+  useEffect(() => {
+    if (repoLabel) {
+      void repository.loadRepositoryContributors();
+    }
+  }, [repoLabel, repository]);
+
+  function handleModalOpen(type) {
+    if (!repoLabel) return;
+    if (type === 'merged') void repository.loadMergedPullRequestDetails();
+    if (type === 'teammates') void repository.loadRepositoryContributors();
+  }
+
   async function copyInvite(username = '') {
     const message = buildInviteMessage(store.repoKeyString || 'this repository', username);
     try {
@@ -131,8 +145,7 @@ const DashboardPresenter = observer(function DashboardPresenter() {
       activeGoals={activeGoalCards}
       allUserContributionsById={store.allUserRequestContributionsById}
       mergedPullRequests={store.mergedPullRequests}
-      onLoadMergedPullRequests={() => repository.loadMergedPullRequestDetails()}
-      onLoadRepositoryContributors={() => repository.loadRepositoryContributors()}
+      onModalOpen={handleModalOpen}
       onCopyInvite={copyInvite}
     />
   );

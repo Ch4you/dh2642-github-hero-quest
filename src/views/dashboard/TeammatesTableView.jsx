@@ -36,7 +36,7 @@ export default function TeammatesTableView({ teammates, loading = false, repoLab
               <td className="px-4 py-3 text-right">
                 {row.synced ? (
                   <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => onSelectPlayer?.(row.player)}>
-                    View contribution
+                    View
                   </Button>
                 ) : (
                   <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => onCopyInvite?.(row.username)}>
