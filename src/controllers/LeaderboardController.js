@@ -39,6 +39,7 @@ function mapFirebaseRecordToPlayer(row) {
     weeklySyncedAtMs: Number(row.weeklySyncedAtMs ?? 0),
     allTimeSyncedAtMs: Number(row.allTimeSyncedAtMs ?? 0),
     updatedAtMs: timestampToMs(row.updatedAt),
+    createdAtMs: Number(row.createdAtMs ?? 0) || timestampToMs(row.createdAt) || timestampToMs(row.updatedAt),
     requestBonusXp: Number(row.requestBonusXp ?? 0),
     questBonusXp: Number(row.requestBonusXp ?? 0),
     trend: row.trend ?? '',
@@ -72,8 +73,8 @@ export class LeaderboardController {
       this.store.setLeaderboardUnsubscribe(unsubscribe);
     } catch (error) {
       this.store.addNotification(
-        `Firebase leaderboard could not start: ${error?.message ?? 'configure VITE_FIREBASE_*'}`,
-        'Firebase error',
+        `Team ranking could not start: ${error?.message ?? 'try again later'}`,
+        'Team ranking error',
         'error',
       );
     }

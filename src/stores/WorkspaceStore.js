@@ -21,6 +21,8 @@ export class WorkspaceStore {
   root;
   repo = { owner: '', name: '' };
   repoStats = { mergedPRs: 0 };
+  mergedPullRequests = [];
+  mergedPullRequestsSyncedAtMs = 0;
   repositories = [];
   repositoryInput = '';
   recentRepositories = [];
@@ -102,6 +104,11 @@ export class WorkspaceStore {
     const keyToRemove = String(repoKey ?? '');
     if (!keyToRemove) return false;
 
+    if (this.repositories.length <= 1) {
+      this.root.ui.setFlashMessage('Keep at least one repository connected. Add another repository before removing this one.');
+      return false;
+    }
+
     const wasActive = this.activeRepoKey === keyToRemove;
     const removedRepo = this.repositories.find((repo) => makeRepositoryKey(repo) === keyToRemove);
     this.repositories = this.repositories.filter((repo) => makeRepositoryKey(repo) !== keyToRemove);
@@ -177,6 +184,8 @@ export class WorkspaceStore {
   resetRepositoryData() {
     this.hero = new HeroModel({ scoreRules: this.scoreRules });
     this.repoStats = { mergedPRs: 0 };
+    this.mergedPullRequests = [];
+    this.mergedPullRequestsSyncedAtMs = 0;
     this.connectError = '';
     this.syncStatus = 'idle';
     this.lastSyncedAt = '';
@@ -221,6 +230,11 @@ export class WorkspaceStore {
     };
   }
 
+  setMergedPullRequests(items = [], syncedAtMs = Date.now()) {
+    this.mergedPullRequests = Array.isArray(items) ? items : [];
+    this.mergedPullRequestsSyncedAtMs = Number(syncedAtMs ?? 0);
+  }
+
   setScoreRules(rules) {
     this.scoreRules = normalizeScoreRules(rules);
     this.hero = HeroModel.fromActivity(this.hero, this.scoreRules);
@@ -245,6 +259,8 @@ export class WorkspaceStore {
   reset() {
     this.repo = { owner: '', name: '' };
     this.repoStats = { mergedPRs: 0 };
+    this.mergedPullRequests = [];
+    this.mergedPullRequestsSyncedAtMs = 0;
     this.repositories = [];
     this.repositoryInput = '';
     this.recentRepositories = [];

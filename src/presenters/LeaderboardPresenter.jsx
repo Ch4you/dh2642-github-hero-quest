@@ -4,7 +4,7 @@ import { useControllers, useStore } from '../stores/StoreProvider.jsx';
 import LeaderboardView from '../views/LeaderboardView.jsx';
 
 function formatRangeDate(date) {
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function getLastSevenDaysRange(now = new Date()) {
@@ -73,9 +73,9 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
     store.setLeaderboardFilter(nextFilter);
 
     if (nextFilter === 'Last 7 days') {
-      void repository.syncWeeklyLeaderboardForActiveRepository({ source: 'background' });
+      void repository.syncWeeklyLeaderboardForActiveRepository({ source: 'background', onlyIfMissing: true });
     } else {
-      void repository.syncAllTimeLeaderboard({ source: 'background' });
+      void repository.syncAllTimeLeaderboard({ source: 'background', onlyIfMissing: true });
     }
   }
 

@@ -65,7 +65,7 @@ export default function LeaderboardView({
           <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <CardTitle>Team ranking</CardTitle>
-              <CardDescription>Live data from Firebase for this repository (sync to appear).</CardDescription>
+              <CardDescription>Synced team data for this repository.</CardDescription>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-right text-sm text-slate-600">
               <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Time range</div>
@@ -75,7 +75,7 @@ export default function LeaderboardView({
           <CardContent className="space-y-3">
             {orderedPlayers.length === 0 && (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">
-                No entries yet. Connect a repo, set <code className="rounded bg-white px-1">VITE_FIREBASE_*</code>, then sync — each teammate syncs to join the board.
+                No entries yet. Connect a repo and sync; each teammate appears after syncing this repository.
               </div>
             )}
             {orderedPlayers.length > 0 && (

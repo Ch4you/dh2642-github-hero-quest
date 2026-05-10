@@ -19,9 +19,14 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
   const canSync = Boolean(store.repoKeyString) && !store.isLoading && cooldownRemainingMs <= 0;
 
   function requestRemoveRepository(repoKey) {
+    if (store.repositories.length <= 1) {
+      store.setFlashMessage('Keep at least one repository connected. Add another repository before removing this one.');
+      return;
+    }
+
     store.requestConfirmation({
       title: `Remove ${repoKey}?`,
-      message: 'This only removes the repository from your workspace. It will not delete the GitHub repository or shared Firebase data, so you can add it back later.',
+      message: 'This only removes the repository from your workspace. It will not delete the GitHub repository or shared team data, so you can add it back later.',
       confirmLabel: 'Remove repository',
       tone: 'danger',
       onConfirm: () => repository.removeRepository(repoKey),

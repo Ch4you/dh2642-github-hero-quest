@@ -1,6 +1,6 @@
 import { makeAutoObservable } from 'mobx';
 
-const PROTECTED_STEPS = new Set(['dashboard', 'leaderboard', 'quests']);
+const PROTECTED_STEPS = new Set(['leaderboard', 'quests']);
 
 export class UiStore {
   root;
@@ -53,23 +53,20 @@ export class UiStore {
   }
 
   addNotification(text, title = 'Update', type = 'info') {
-    const notification = {
-      id: this.nextNotificationId,
-      title,
-      text,
-      type,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
+    const cleanTitle = String(title || '').trim();
+    const cleanText = String(text || '').trim();
     this.nextNotificationId += 1;
-    this.notifications = [notification, ...this.notifications].slice(0, 8);
+    this.flashMessage = cleanTitle && cleanText ? `${cleanTitle}: ${cleanText}` : cleanText || cleanTitle;
+    this.notifications = [];
+    this.notificationsOpen = false;
   }
 
   toggleNotifications() {
-    this.notificationsOpen = !this.notificationsOpen;
+    this.notificationsOpen = false;
   }
 
   openNotifications() {
-    this.notificationsOpen = true;
+    this.notificationsOpen = false;
   }
 
   closeNotifications() {

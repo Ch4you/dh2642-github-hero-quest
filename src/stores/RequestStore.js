@@ -14,6 +14,7 @@ export class RequestStore {
   ];
   requestMetricsById = {};
   requestContributionsById = {};
+  allUserRequestContributionsById = {};
   requestMetricsSyncedAtMs = 0;
   requestDraft = null;
   questUnsubscribe = null;
@@ -84,13 +85,26 @@ export class RequestStore {
     const nextContributions = { ...this.requestContributionsById };
     delete nextMetrics[id];
     delete nextContributions[id];
+    const nextAllUserContributions = Object.fromEntries(
+      Object.entries(this.allUserRequestContributionsById || {}).map(([username, record]) => {
+        const nextRecord = { ...(record || {}) };
+        const values = { ...(nextRecord.contributionsById || {}) };
+        delete values[id];
+        nextRecord.contributionsById = values;
+        return [username, nextRecord];
+      }),
+    );
     this.requestMetricsById = nextMetrics;
     this.requestContributionsById = nextContributions;
+    this.allUserRequestContributionsById = nextAllUserContributions;
   }
 
-  setRequestMetricValues(valuesById = {}, contributionsById = {}, syncedAtMs = Date.now()) {
+  setRequestMetricValues(valuesById = {}, contributionsById = {}, syncedAtMs = Date.now(), allUserContributionsById = null) {
     this.requestMetricsById = { ...valuesById };
     this.requestContributionsById = { ...contributionsById };
+    if (allUserContributionsById) {
+      this.allUserRequestContributionsById = { ...allUserContributionsById };
+    }
     this.requestMetricsSyncedAtMs = Number(syncedAtMs ?? 0);
   }
 
@@ -105,7 +119,7 @@ export class RequestStore {
       endDate: payload?.endDate ?? this.quest.endDate,
       rewardXp: Number.isFinite(Number(payload?.rewardXp)) ? Number(payload.rewardXp) : this.quest.rewardXp,
     };
-    this.root.ui.addNotification('Request draft saved locally', 'Draft saved');
+    this.root.ui.addNotification('Goal draft saved locally', 'Draft saved');
   }
 
   setQuest(quest) {
@@ -131,6 +145,7 @@ export class RequestStore {
     this.requests = [];
     this.requestMetricsById = {};
     this.requestContributionsById = {};
+    this.allUserRequestContributionsById = {};
     this.requestMetricsSyncedAtMs = 0;
     this.requestDraft = null;
   }
@@ -140,6 +155,7 @@ export class RequestStore {
     this.requests = [];
     this.requestMetricsById = {};
     this.requestContributionsById = {};
+    this.allUserRequestContributionsById = {};
     this.requestMetricsSyncedAtMs = 0;
     this.requestDraft = null;
   }

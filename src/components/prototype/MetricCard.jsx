@@ -1,8 +1,18 @@
 import { cn } from '../ui/utils.js';
 
-export default function MetricCard({ title, value, subtitle, icon: Icon }) {
+export default function MetricCard({ title, value, subtitle, icon: Icon, onClick }) {
+  const interactive = typeof onClick === 'function';
+  const Wrapper = interactive ? 'button' : 'div';
+
   return (
-    <div className={cn('rounded-3xl border-slate-200 shadow-sm bg-white border')}>
+    <Wrapper
+      type={interactive ? 'button' : undefined}
+      onClick={onClick}
+      className={cn(
+        'w-full rounded-3xl border border-slate-200 bg-white text-left shadow-sm transition',
+        interactive && 'hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300',
+      )}
+    >
       <div className="p-6">
         <div className="flex items-start justify-between">
           <div>
@@ -15,7 +25,7 @@ export default function MetricCard({ title, value, subtitle, icon: Icon }) {
           </div>
         </div>
       </div>
-    </div>
+    </Wrapper>
   );
 }
 

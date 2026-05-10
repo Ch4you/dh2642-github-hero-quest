@@ -32,12 +32,12 @@ export class QuestController {
           void this.loadCachedRequestMetrics();
         },
         onError: (error) => {
-          this.store.addNotification(`Request sync failed: ${error?.message ?? 'unknown'}`, 'Request error', 'error');
+          this.store.addNotification(`Goal sync failed: ${error?.message ?? 'unknown'}`, 'Goal error', 'error');
         },
       });
       this.store.setQuestUnsubscribe(unsubscribe);
     } catch (error) {
-      this.store.addNotification(`Request subscription failed: ${error?.message ?? 'unknown'}`, 'Request error', 'error');
+      this.store.addNotification(`Goal subscription failed: ${error?.message ?? 'unknown'}`, 'Goal error', 'error');
     }
   }
 
@@ -56,12 +56,13 @@ export class QuestController {
         cached.valuesById,
         cached.contributionsById,
         cached.syncedAtMs,
+        cached.allUserContributionsById,
       );
       return true;
     } catch (error) {
       this.store.addNotification(
-        `Saved request metrics could not load: ${error?.message ?? 'unknown'}`,
-        'Request metrics warning',
+        `Saved goal metrics could not load: ${error?.message ?? 'unknown'}`,
+        'Goal metrics warning',
         'error',
       );
       return false;
@@ -80,14 +81,14 @@ export class QuestController {
   async saveRequest(payload) {
     if (!this.store.repoKeyString) {
       this.store.setStep('connect');
-      this.store.addNotification('Connect a repository before saving requests.', 'Repository required', 'error');
+      this.store.addNotification('Connect a repository before saving goals.', 'Repository required', 'error');
       return;
     }
 
     const target = Number(payload?.targetValue);
     const nextRequest = new RequestModel({
       id: payload?.id,
-      title: payload?.title?.trim() || 'Untitled request',
+      title: payload?.title?.trim() || 'Untitled goal',
       description: payload?.description?.trim() || '',
       metricType: payload?.metricType,
       targetValue: Number.isFinite(target) && target > 0 ? target : 1,
@@ -98,14 +99,14 @@ export class QuestController {
     });
 
     if (nextRequest.endDate && nextRequest.startDate && nextRequest.endDate < nextRequest.startDate) {
-      this.store.addNotification('End date must be after the start date.', 'Request not saved', 'error');
+      this.store.addNotification('End date must be after the start date.', 'Goal not saved', 'error');
       return;
     }
 
     this.store.upsertRequest(nextRequest);
     await this.persistRequests();
     await this.loadCachedRequestMetrics();
-    this.store.addNotification(`Request saved for ${this.store.repoKeyString}`, 'Request saved', 'success');
+    this.store.addNotification(`Goal saved for ${this.store.repoKeyString}`, 'Request saved', 'success');
     this.store.setStep('dashboard');
   }
 
@@ -115,7 +116,7 @@ export class QuestController {
     this.store.removeRequest(requestId);
     await this.persistRequests();
     await this.loadCachedRequestMetrics();
-    this.store.addNotification(`Deleted request “${request.title}”.`, 'Request deleted', 'success');
+    this.store.addNotification(`Deleted goal “${request.title}”.`, 'Goal deleted', 'success');
   }
 
   async refreshRequestMetrics({ force = false } = {}) {
@@ -145,7 +146,18 @@ export class QuestController {
       );
       const syncedAtMs = Date.now();
 
-      this.store.setRequestMetricValues(progress.valuesById, progress.contributionsById, syncedAtMs);
+      this.store.setRequestMetricValues(
+        progress.valuesById,
+        progress.contributionsById,
+        syncedAtMs,
+        {
+          ...(this.store.allUserRequestContributionsById || {}),
+          [this.store.profile.username || 'unknown']: {
+            contributionsById: progress.contributionsById,
+            syncedAtMs,
+          },
+        },
+      );
 
       if (isFirebaseConfigured()) {
         await saveRequestMetricsForRepo({
@@ -159,8 +171,8 @@ export class QuestController {
       return true;
     } catch (error) {
       this.store.addNotification(
-        `Request metrics could not refresh: ${error?.message ?? 'unknown'}`,
-        'Request metrics warning',
+        `Goal metrics could not refresh: ${error?.message ?? 'unknown'}`,
+        'Goal metrics warning',
         'error',
       );
       return false;

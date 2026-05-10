@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import StatusPill from '../components/prototype/StatusPill.jsx';
-import { Bell, ChevronDown, HelpCircle, LogOut, Medal, RefreshCw, Settings, Target, Trash2, Trophy, UserCircle2 } from 'lucide-react';
+import { ChevronDown, HelpCircle, LogOut, Medal, RefreshCw, Settings, Target, Trash2, Trophy, UserCircle2 } from 'lucide-react';
 import { Button } from '../components/ui/button.jsx';
 import { Avatar, AvatarFallback } from '../components/ui/avatar.jsx';
 import { cn } from '../components/ui/utils.js';
@@ -10,7 +10,7 @@ import { useClickOutside } from '../hooks/useClickOutside.js';
 const nav = [
   { key: 'dashboard', label: 'Dashboard', Icon: Trophy, step: 'dashboard' },
   { key: 'leaderboard', label: 'Team ranking', Icon: Medal, step: 'leaderboard' },
-  { key: 'quests', label: 'Manage requests', Icon: Target, step: 'quests' },
+  { key: 'quests', label: 'Manage goals', Icon: Target, step: 'quests' },
   { key: 'settings', label: 'Workspace', Icon: Settings, step: 'connect' },
   { key: 'about', label: 'About', Icon: HelpCircle, step: 'about' },
 ];
@@ -32,6 +32,8 @@ function NavItem({ active, Icon, label, onClick }) {
 }
 
 function HeaderRepositoryMenu({ repoLabel, repositories = [], activeRepoKey, open, onToggle, onClose, menuRef, buttonRef, onSwitchRepository, onRemoveRepository, onOpenWorkspace }) {
+  const canRemoveRepositories = repositories.length > 1;
+
   return (
     <div className="relative min-w-0">
       <button
@@ -89,13 +91,20 @@ function HeaderRepositoryMenu({ repoLabel, repositories = [], activeRepoKey, ope
                     </button>
                     <button
                       type="button"
-                      title={`Remove ${key}`}
-                      aria-label={`Remove ${key}`}
+                      title={canRemoveRepositories ? `Remove ${key}` : 'Keep at least one repository connected'}
+                      aria-label={canRemoveRepositories ? `Remove ${key}` : 'Keep at least one repository connected'}
+                      disabled={!canRemoveRepositories}
                       onClick={(event) => {
                         event.stopPropagation();
+                        if (!canRemoveRepositories) return;
                         onRemoveRepository?.(key);
                       }}
-                      className="shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                      className={cn(
+                        'shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition',
+                        canRemoveRepositories
+                          ? 'hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700'
+                          : 'cursor-not-allowed opacity-40',
+                      )}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -225,7 +234,7 @@ export default function AppShellView({
 
   useEffect(() => {
     if (!flashMessage) return undefined;
-    const timer = window.setTimeout(() => onDismissFlashMessage?.(), 4000);
+    const timer = window.setTimeout(() => onDismissFlashMessage?.(), 3000);
     return () => window.clearTimeout(timer);
   }, [flashMessage, onDismissFlashMessage]);
 
@@ -241,7 +250,7 @@ export default function AppShellView({
             <div className="rounded-2xl bg-slate-900 p-2 text-white"><Trophy className="h-5 w-5" /></div>
             <div>
               <div className="font-semibold text-slate-900">GitHub Hero Quest</div>
-              <div className="text-xs text-slate-500">Repository progress workspace</div>
+              
             </div>
           </div>
 
@@ -298,10 +307,6 @@ export default function AppShellView({
                     <><RefreshCw className="mr-2 h-4 w-4" /> Sync</>
                   )}
                 </Button>
-                <Button variant="outline" size="icon" className="relative rounded-2xl border-slate-200 bg-white" type="button" onClick={onToggleNotifications}>
-                  <Bell className="h-4 w-4" />
-                  {notifications?.length > 0 && <span className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full bg-slate-900 px-1 text-[10px] leading-4 text-white">{notifications.length}</span>}
-                </Button>
                 <button
                   type="button"
                   ref={profileButtonRef}
@@ -344,15 +349,11 @@ export default function AppShellView({
           )}
 
           {flashMessage && (
-            <div className="fixed right-6 top-24 z-50 max-w-md rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm text-emerald-700 shadow-2xl lg:right-8 lg:top-20">
-              <div className="flex items-center justify-between gap-3">
-                <span>{flashMessage}</span>
-                <button type="button" className="text-emerald-700 underline" onClick={onDismissFlashMessage}>Dismiss</button>
-              </div>
+            <div className="fixed left-1/2 top-6 z-50 w-[min(92vw,520px)] -translate-x-1/2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-center text-sm font-medium text-slate-800 shadow-2xl">
+              {flashMessage}
             </div>
           )}
 
-          <NotificationDrawer open={notificationsOpen} notifications={notifications} onClose={onCloseNotifications} onClear={onClearNotifications} />
           <ConfirmationDialog confirmation={confirmation} onCancel={onCancelConfirmation} onConfirm={onConfirmConfirmation} />
 
           <div className="relative p-6 lg:p-8">

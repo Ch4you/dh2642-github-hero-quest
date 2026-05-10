@@ -157,6 +157,31 @@ export async function getRequestMetricValues(owner, repo, username, requests = [
   return { valuesById, contributionsById };
 }
 
+
+export async function getMergedPullRequestDetails(owner, repo, { limit = 10 } = {}) {
+  if (!owner?.trim() || !repo?.trim()) {
+    throw new Error('Repository owner/name is required before loading merged pull requests.');
+  }
+
+  const cleanOwner = owner.trim();
+  const cleanRepo = repo.trim();
+  const perPage = Math.min(20, Math.max(1, Number(limit) || 10));
+  const queryText = `repo:${cleanOwner}/${cleanRepo} is:pr is:merged`;
+  const url = `https://api.github.com/search/issues?q=${encodeURIComponent(queryText)}&sort=updated&order=desc&per_page=${perPage}`;
+  const json = await fetchJsonOrThrow(url);
+
+  return (Array.isArray(json?.items) ? json.items : []).map((item, index) => ({
+    id: String(item.id ?? `${cleanOwner}/${cleanRepo}/${item.number ?? index}`),
+    index: index + 1,
+    number: Number(item.number ?? 0),
+    title: String(item.title ?? 'Untitled pull request'),
+    author: String(item.user?.login ?? 'unknown'),
+    mergedAt: item.closed_at || item.updated_at || '',
+    url: item.html_url || '',
+    description: `#${item.number ?? ''} ${item.title ?? 'Merged pull request'}`.trim(),
+  }));
+}
+
 export async function getRepoStats(owner, repo, username, { since = '', until = '' } = {}) {
   if (!owner?.trim() || !repo?.trim()) {
     throw new Error('Repository owner/name is required before syncing.');

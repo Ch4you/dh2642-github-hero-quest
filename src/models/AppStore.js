@@ -28,6 +28,8 @@ export class AppStore {
 
   get repo() { return this.workspace.repo; }
   get repoStats() { return this.workspace.repoStats; }
+  get mergedPullRequests() { return this.workspace.mergedPullRequests; }
+  get mergedPullRequestsSyncedAtMs() { return this.workspace.mergedPullRequestsSyncedAtMs; }
   get repositories() { return this.workspace.repositories; }
   get repositoryInput() { return this.workspace.repositoryInput; }
   get recentRepositories() { return this.workspace.recentRepositories; }
@@ -51,6 +53,7 @@ export class AppStore {
   get requests() { return this.requestsStore.requests; }
   get requestMetricsById() { return this.requestsStore.requestMetricsById; }
   get requestContributionsById() { return this.requestsStore.requestContributionsById; }
+  get allUserRequestContributionsById() { return this.requestsStore.allUserRequestContributionsById; }
   get requestMetricsSyncedAtMs() { return this.requestsStore.requestMetricsSyncedAtMs; }
   get requestDraft() { return this.requestsStore.requestDraft; }
   get activeRequests() { return this.requestsStore.activeRequests; }
@@ -97,6 +100,7 @@ export class AppStore {
   setSyncStatus = (status) => this.workspace.setSyncStatus(status);
   setHeroActivity = (activity) => this.workspace.setHeroActivity(activity);
   setRepoStats = (stats) => this.workspace.setRepoStats(stats);
+  setMergedPullRequests = (items, syncedAtMs) => this.workspace.setMergedPullRequests(items, syncedAtMs);
   setScoreRules = (rules) => this.workspace.setScoreRules(rules);
   setLastSyncedAt = (value) => this.workspace.setLastSyncedAt(value);
   markSyncStarted = (repoKey) => this.workspace.markSyncStarted(repoKey);
@@ -106,7 +110,8 @@ export class AppStore {
   setRequests = (requests) => this.requestsStore.setRequests(requests);
   upsertRequest = (request) => this.requestsStore.upsertRequest(request);
   removeRequest = (requestId) => this.requestsStore.removeRequest(requestId);
-  setRequestMetricValues = (valuesById, contributionsById, syncedAtMs) => this.requestsStore.setRequestMetricValues(valuesById, contributionsById, syncedAtMs);
+  setRequestMetricValues = (valuesById, contributionsById, syncedAtMs, allUserContributionsById) =>
+    this.requestsStore.setRequestMetricValues(valuesById, contributionsById, syncedAtMs, allUserContributionsById);
   saveRequestDraft = (payload) => this.requestsStore.saveRequestDraft(payload);
   setQuest = (quest) => this.requestsStore.setQuest(quest);
   saveQuestDraft = (payload) => this.requestsStore.saveQuestDraft(payload);

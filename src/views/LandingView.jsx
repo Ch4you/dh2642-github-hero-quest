@@ -30,13 +30,13 @@ export default function LandingView({
             Level up your team’s GitHub collaboration.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
-            Turn commits and pull requests into XP, requests, progress insight, and a transparent leaderboard your team can actually use.
+            Turn commits and pull requests into XP, team goals, progress insight, and a transparent leaderboard your team can actually use.
           </p>
 
           <div className="mt-8 space-y-3">
             {[
               'Track contribution progress in one place',
-              'Create shared coding requests with deadlines',
+              'Create shared coding goals with deadlines',
               'Explain rankings with clear XP breakdowns',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3 text-slate-700">

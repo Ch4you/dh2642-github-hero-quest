@@ -15,8 +15,8 @@ const features = [
     Icon: RefreshCw,
   },
   {
-    title: 'Create measurable requests',
-    description: 'Set team requests with a metric, target, start date, and end date. The app shows whether each request is scheduled, active, completed, or expired.',
+    title: 'Create measurable goals',
+    description: 'Set team goals with a metric, target, start date, and end date. The app shows whether each goal is scheduled, active, completed, or expired.',
     Icon: Target,
   },
   {
@@ -30,13 +30,13 @@ const steps = [
   'Sign in with GitHub so the app knows which user is syncing contribution data.',
   'Open Workspace, add a repository, or switch to one that is already in your workspace.',
   'Click Sync to load GitHub activity. If the button asks you to wait, the app is protecting the GitHub API rate limit.',
-  'Create requests with date ranges and team metrics, then watch their progress on the Dashboard.',
+  'Create goals with date ranges and team metrics, then watch their progress on the Dashboard.',
   'Open Team ranking to compare contribution XP and review the active time range used for ranking.',
 ];
 
 const statusRows = [
-  ['Scheduled', 'The request has not reached its start date yet.'],
-  ['Active', 'Today is inside the request date range, and the target is not reached yet.'],
+  ['Scheduled', 'The goal has not reached its start date yet.'],
+  ['Active', 'Today is inside the goal date range, and the target is not reached yet.'],
   ['Completed', 'The team metric reached the target for the selected date range.'],
   ['Expired', 'The end date passed before the target was reached.'],
 ];
@@ -55,10 +55,10 @@ function FeatureCard({ Icon, title, description }) {
   return (
     <Card className="h-full border-slate-200 bg-white shadow-sm">
       <CardContent className="p-5">
-        <div className="mb-4 inline-flex rounded-2xl bg-slate-100 p-3 text-slate-800 titleBox">
-          <Icon className="h-5 w-5" /><h3 className="text-base font-semibold text-slate-950 pdl8">{title}</h3>
+        <div className="mb-4 inline-flex rounded-2xl bg-slate-100 p-3 text-slate-800">
+          <Icon className="h-5 w-5" />
         </div>
-        
+        <h3 className="text-base font-semibold text-slate-950">{title}</h3>
         <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
       </CardContent>
     </Card>
@@ -74,14 +74,14 @@ export default function AboutView({ onNavigate }) {
             <SectionHeader
               eyebrow="About GitHub Hero Quest"
               title="A gamified workspace for tracking team repository progress"
-              description="GitHub Hero Quest helps student project teams turn GitHub activity into visible progress. It combines repository syncing, measurable team requests, XP rules, and a leaderboard so teammates can understand what is happening in the project and how they are contributing."
+              description="GitHub Hero Quest helps student project teams turn GitHub activity into visible progress. It combines repository syncing, measurable team goals, XP rules, and a leaderboard so teammates can understand what is happening in the project and how they are contributing."
             />
             <div className="mt-6 flex flex-wrap gap-3">
               <Button type="button" className="rounded-2xl" onClick={() => onNavigate?.('connect')}>
                 Open Workspace
               </Button>
               <Button type="button" variant="outline" className="rounded-2xl border-slate-200" onClick={() => onNavigate?.('quests')}>
-                Manage requests
+                Manage goals
               </Button>
             </div>
           </div>
@@ -104,7 +104,7 @@ export default function AboutView({ onNavigate }) {
                 <span className="font-semibold text-slate-950">Main benefit:</span> make repository activity easier to discover, compare, and act on during group work.
               </div>
               <div className="rounded-2xl bg-white p-4 text-sm text-slate-700 shadow-sm">
-                <span className="font-semibold text-slate-950">Data source:</span> GitHub public repository activity plus Firebase persistence for workspace, requests, XP rules, and rankings.
+                <span className="font-semibold text-slate-950">Data source:</span> GitHub public repository activity, plus saved workspace settings, goals, XP rules, and rankings so the app can restore your work later.
               </div>
             </div>
           </div>
@@ -141,8 +141,8 @@ export default function AboutView({ onNavigate }) {
             <div className="mb-5 flex items-center gap-3">
               <div className="rounded-2xl bg-slate-100 p-3 text-slate-800"><HelpCircle className="h-5 w-5" /></div>
               <div>
-                <h2 className="text-xl font-semibold text-slate-950">Understanding request status</h2>
-                <p className="text-sm text-slate-500">Requests use their metric, target, start date, and end date.</p>
+                <h2 className="text-xl font-semibold text-slate-950">Understanding goal status</h2>
+                <p className="text-sm text-slate-500">Goals use their metric, target, start date, and end date.</p>
               </div>
             </div>
             <div className="space-y-3">
@@ -160,28 +160,22 @@ export default function AboutView({ onNavigate }) {
       <section className="grid gap-6 pt-2 lg:grid-cols-3">
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardContent className="p-6">
-            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800 titleBox"><Settings className="h-5 w-5" />
-            <h2 className="text-lg font-semibold text-slate-950 pdl8">Workspace and XP rules</h2>
-            </div>
-            
+            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800"><Settings className="h-5 w-5" /></div>
+            <h2 className="text-lg font-semibold text-slate-950">Workspace and XP rules</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">Each repository has its own shared team XP rules. This keeps ranking fair inside a repository while allowing different projects to use different scoring priorities.</p>
           </CardContent>
         </Card>
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardContent className="p-6">
-            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800 titleBox"><Users className="h-5 w-5" />
-            <h2 className="text-lg font-semibold text-slate-950 pdl8">Dashboard vs Team ranking</h2>
-            </div>
-            
-            <p className="mt-2 text-sm leading-6 text-slate-600">Dashboard shows the current repository status and request progress. Team ranking focuses on comparing synced teammates by XP for the selected time range.</p>
+            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800"><Users className="h-5 w-5" /></div>
+            <h2 className="text-lg font-semibold text-slate-950">Dashboard vs Team ranking</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Dashboard shows the current repository summary and goal progress. Team ranking focuses on comparing synced teammates by XP for the selected time range.</p>
           </CardContent>
         </Card>
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardContent className="p-6">
-            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800 titleBox"><ShieldCheck className="h-5 w-5" />
-            <h2 className="text-lg font-semibold text-slate-950 pdl8">Privacy and control</h2>
-            </div>
-            
+            <div className="mb-4 rounded-2xl bg-slate-100 p-3 text-slate-800"><ShieldCheck className="h-5 w-5" /></div>
+            <h2 className="text-lg font-semibold text-slate-950">Privacy and control</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">Removing a repository only removes it from your workspace. It does not delete the GitHub repository or shared team data, so the repository can be added again later.</p>
           </CardContent>
         </Card>
