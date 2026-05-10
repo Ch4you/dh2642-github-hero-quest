@@ -42,7 +42,7 @@ export default function QuestConfiguratorView({
         <div className="flex items-center gap-2">
           <GoalStatusInfoView />
           <Button type="button" className="rounded-2xl bg-slate-900 text-white hover:bg-slate-800" onClick={onNewRequest}>
-            <Plus className="h-4 w-4" /> Add new goal
+            <Plus className="h-4 w-4" /> Add
           </Button>
         </div>
       </div>

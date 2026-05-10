@@ -83,10 +83,7 @@ export default function QuestDashboardView({
       <Card className="rounded-[28px] border-slate-200 shadow-sm">
         <CardHeader className="flex flex-row items-start justify-between space-y-0">
           <div>
-            <div className="flex items-center gap-2">
-              <Badge className="rounded-full bg-violet-100 text-violet-700 hover:bg-violet-100">Team goals preview</Badge>
-              <InfoTip label="Goal information">Goals are team targets measured from public GitHub activity in the selected repository.</InfoTip>
-            </div>
+           
             <CardTitle className="mt-4 text-2xl">Latest active goal</CardTitle>
           </div>
           <div className="flex items-center gap-2">

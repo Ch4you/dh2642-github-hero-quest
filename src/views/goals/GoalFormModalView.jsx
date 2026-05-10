@@ -31,12 +31,9 @@ export default function GoalFormModalView({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-bold text-slate-900">{editing ? 'Edit team goal' : 'Create a team goal'}</h2>
-              <InfoTip label="Goal form information">A saved draft is reused when you add a new goal. Use the clear button to reset the form.</InfoTip>
+            
             </div>
-            <div className="mt-3 flex items-center gap-2">
-              <Badge className={cn('rounded-full', statusTone(preview?.status))}>{statusLabel(preview?.status)}</Badge>
-              <span className="text-sm text-slate-500">Preview status</span>
-            </div>
+           
           </div>
           <button type="button" className="rounded-2xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -131,10 +128,10 @@ export default function GoalFormModalView({
 
           <div className="mt-6 flex flex-wrap justify-end gap-3">
             <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onClearForm}>
-              <RotateCcw className="h-4 w-4" /> Clear form
+              <RotateCcw className="h-4 w-4" /> Reset
             </Button>
             <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onSaveDraft}>
-              Save local draft
+              Save
             </Button>
             <Button variant="ghost" className="rounded-2xl" onClick={onClose}>
               Cancel

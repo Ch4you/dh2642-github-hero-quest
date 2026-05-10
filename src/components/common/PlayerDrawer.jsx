@@ -22,7 +22,7 @@ export default function PlayerDrawer({ player, xpBreakdown = [], periodLabel = '
   const initials = player?.initials ?? '';
   if (!player) return null;
   const earnedBadges = Array.isArray(player.badges) ? player.badges.filter((badge) => badgeDescriptions[badge]) : [];
-  const summaryTitle = periodLabel ? `${periodLabel} summary` : 'This period summary';
+  const summaryTitle = periodLabel ? `${periodLabel} ` : 'summary';
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -33,8 +33,8 @@ export default function PlayerDrawer({ player, xpBreakdown = [], periodLabel = '
               <AvatarFallback className="bg-slate-900 text-white">{initials}</AvatarFallback>
             </Avatar>
             <div>
-              <SheetTitle className="text-left text-xl">{player.name}</SheetTitle>
-              <SheetDescription className="text-left">
+              <SheetTitle className="text-left text-xl ">{player.name}</SheetTitle>
+              <SheetDescription className="text-left pdtL">
                 Level {player.level} · {player.xp} XP
               </SheetDescription>
             </div>
@@ -78,7 +78,6 @@ export default function PlayerDrawer({ player, xpBreakdown = [], periodLabel = '
             <CardHeader>
               <div className="flex items-center gap-2">
                 <CardTitle className="text-base">XP breakdown</CardTitle>
-                <InfoTip label="XP breakdown information">XP is calculated by the presenter from synced repository activity and the current scoring rules.</InfoTip>
               </div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -96,7 +95,7 @@ export default function PlayerDrawer({ player, xpBreakdown = [], periodLabel = '
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-base">Badges</CardTitle>
-                  <InfoTip label="Badge information">{earnedBadges.length} of {totalBadgeTypes} badge types earned.</InfoTip>
+            
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">

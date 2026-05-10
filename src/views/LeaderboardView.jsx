@@ -34,7 +34,7 @@ export default function LeaderboardView({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Team ranking</h1>
-          <p className="mt-2 text-slate-600">Track how activity translates into XP and level progression.</p>
+         
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
@@ -63,9 +63,9 @@ export default function LeaderboardView({
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <Card className="rounded-[28px] border-slate-200 shadow-sm">
           <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div>
-              <CardTitle>Team ranking</CardTitle>
-              <CardDescription>Synced team data for this repository.</CardDescription>
+            <div >
+            
+             
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-right text-sm text-slate-600">
               <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Time range</div>

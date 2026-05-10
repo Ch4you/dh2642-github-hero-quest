@@ -22,7 +22,7 @@ function XpRulesModal({ open, onClose, repositories = [], selectedRepoKey, onSel
       <div className="relative max-h-[90vh] w-full max-w-xl overflow-visible rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">Team scoring settings</div>
+           
             <div className="mt-3 flex items-center gap-2">
               <h2 className="text-2xl font-bold text-slate-900">Team XP rules</h2>
               <InfoTip label="Team XP rules information">
