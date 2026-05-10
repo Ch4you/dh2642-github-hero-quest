@@ -127,12 +127,16 @@ export default function GoalFormModalView({
           </div>
 
           <div className="mt-6 flex flex-wrap justify-end gap-3">
-            <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onClearForm}>
-              <RotateCcw className="h-4 w-4" /> Reset
-            </Button>
-            <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onSaveDraft}>
-              Save
-            </Button>
+            {!editing && (
+              <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onClearForm}>
+                <RotateCcw className="h-4 w-4" /> Reset
+              </Button>
+            )}
+            {!editing && (
+              <Button variant="outline" className="rounded-2xl border-slate-200" onClick={onSaveDraft}>
+                Save draft
+              </Button>
+            )}
             <Button variant="ghost" className="rounded-2xl" onClick={onClose}>
               Cancel
             </Button>

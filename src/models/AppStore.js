@@ -17,6 +17,7 @@ export class AppStore {
   get isLoading() { return this.ui.isLoading; }
   get errorMessage() { return this.workspace.manualSyncError; }
   get flashMessage() { return this.ui.flashMessage; }
+  get flashType() { return this.ui.flashType; }
   get loadingPhase() { return this.ui.loadingPhase; }
   get selectedPlayer() { return this.ui.selectedPlayer; }
   get confirmation() { return this.ui.confirmation; }
@@ -67,7 +68,7 @@ export class AppStore {
   setStep = (step) => this.ui.setStep(step);
   setLoading = (payload) => this.ui.setLoading(payload);
   setSyncError = (message, options) => this.workspace.setSyncError(message, options);
-  setFlashMessage = (message) => this.ui.setFlashMessage(message);
+  setFlashMessage = (message, type) => this.ui.setFlashMessage(message, type);
   clearFlashMessage = () => this.ui.clearFlashMessage();
   addNotification = (text, title, type) => this.ui.addNotification(text, title, type);
   selectPlayer = (player) => this.ui.selectPlayer(player);

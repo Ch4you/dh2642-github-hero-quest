@@ -59,10 +59,10 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
       profile={store.profile}
       profileInitials={store.profileInitials}
       onSignOut={() => auth.signOut()}
-      syncStatus={store.syncStatus}
       isLoading={store.isLoading}
       loadingPhase={store.loadingPhase}
       flashMessage={store.flashMessage}
+      flashType={store.flashType}
       confirmation={store.confirmation}
       onCancelConfirmation={store.closeConfirmation}
       onConfirmConfirmation={store.confirmCurrentAction}

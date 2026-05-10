@@ -57,32 +57,30 @@ export default function HeaderRepositoryMenuView({ repoLabel, repositories = [],
                 return (
                   <div
                     key={key}
+                    role={active ? undefined : 'button'}
+                    tabIndex={active ? -1 : 0}
+                    onClick={() => !active && onSwitchRepository?.(key)}
+                    onKeyDown={(event) => {
+                      if (active || (event.key !== 'Enter' && event.key !== ' ')) return;
+                      event.preventDefault();
+                      onSwitchRepository?.(key);
+                    }}
+                    title={key}
                     className={cn(
-                      'flex min-w-0 items-center gap-2 rounded-2xl border p-1.5 transition',
-                      active ? 'border-slate-200 bg-slate-100' : 'border-slate-100 bg-slate-50 hover:bg-white',
+                      'flex min-w-0 items-center gap-2 rounded-2xl border p-1.5 text-left transition',
+                      active
+                        ? 'cursor-default border-slate-300 bg-slate-200 shadow-sm'
+                        : 'cursor-pointer border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white',
                     )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => !active && onSwitchRepository?.(key)}
-                      title={key}
-                      disabled={active}
+                    <span
                       className={cn(
-                        'min-w-0 flex-1 rounded-xl px-2.5 py-2 text-left text-sm text-slate-700 transition',
-                        active ? 'cursor-default' : 'hover:bg-white',
+                        'min-w-0 flex-1 truncate rounded-xl px-2.5 py-2 text-sm text-slate-700',
+                        active ? 'font-semibold text-slate-900' : 'font-medium',
                       )}
                     >
-                      <span className={cn('block truncate', active ? 'font-semibold text-slate-900' : 'font-medium')}>{key}</span>
-                    </button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn('h-8 shrink-0 rounded-xl border-slate-200 px-3 text-xs', active && 'cursor-default opacity-70')}
-                      disabled={active}
-                      onClick={() => onSwitchRepository?.(key)}
-                    >
-                      {active ? 'Current' : 'Switch'}
-                    </Button>
+                      {key}
+                    </span>
                     <button
                       type="button"
                       title={canRemoveRepositories ? `Remove ${key}` : 'Keep at least one repository connected'}

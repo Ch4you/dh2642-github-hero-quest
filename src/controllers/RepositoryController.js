@@ -145,7 +145,12 @@ export class RepositoryController {
       this.store.setRecentRepositories(formatRepositoryRows(repos));
     } catch (error) {
       this.store.setRecentRepositories([]);
-      this.store.setConnectError(explainGitHubError(error));
+      const message = explainGitHubError(error);
+      this.store.addNotification(
+        `${message} You can still paste a public GitHub repository URL.`,
+        'Recent repositories unavailable',
+        'error',
+      );
     } finally {
       this.store.setRecentLoading(false);
     }
@@ -176,7 +181,8 @@ export class RepositoryController {
   async connectRepositoryFromInput() {
     const parsed = parseRepository(this.store.repositoryInput);
     if (!parsed.owner || !parsed.name) {
-      this.store.setConnectError('Use owner/repo or a full GitHub repository URL.');
+      this.store.setConnectError('');
+      this.store.addNotification('Use owner/repo or a full GitHub repository URL.', 'Repository required', 'error');
       return;
     }
 
@@ -206,7 +212,7 @@ export class RepositoryController {
       await this.backgroundSyncActiveRepository();
     } catch (error) {
       const message = explainGitHubError(error);
-      this.store.setConnectError(message);
+      this.store.setConnectError('');
       this.store.setSyncError(message, { source: 'manual' });
       this.store.addNotification(message, 'Repository connection failed', 'error');
     } finally {

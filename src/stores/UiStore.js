@@ -8,6 +8,7 @@ export class UiStore {
   isLoading = false;
   errorMessage = '';
   flashMessage = '';
+  flashType = 'info';
   loadingPhase = '';
   selectedPlayer = null;
   confirmation = null;
@@ -40,12 +41,14 @@ export class UiStore {
     this.errorMessage = '';
   }
 
-  setFlashMessage(message) {
+  setFlashMessage(message, type = 'info') {
     this.flashMessage = message || '';
+    this.flashType = type || 'info';
   }
 
   clearFlashMessage() {
     this.flashMessage = '';
+    this.flashType = 'info';
   }
 
   addNotification(text, title = 'Update', type = 'info') {
@@ -53,6 +56,7 @@ export class UiStore {
     const cleanText = String(text || '').trim();
     if (type === 'error' || type === 'success') {
       this.flashMessage = cleanText || cleanTitle;
+      this.flashType = type;
     }
   }
 
@@ -91,6 +95,7 @@ export class UiStore {
     this.isLoading = false;
     this.errorMessage = '';
     this.flashMessage = '';
+    this.flashType = 'info';
     this.loadingPhase = '';
     this.selectedPlayer = null;
     this.confirmation = null;

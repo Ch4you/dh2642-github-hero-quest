@@ -102,7 +102,6 @@ export default function ConnectRepoView({
   onOpenRecent,
   recentRepositories = [],
   recentLoading = false,
-  connectError,
   repo,
   repositories = [],
   activeRepoKey = '',
@@ -138,9 +137,23 @@ export default function ConnectRepoView({
           <CardContent className="space-y-5">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Repository URL</label>
-              <Input value={repositoryInput} onChange={(event) => onRepositoryInputChange?.(event.target.value)} className="h-12 rounded-2xl" />
-             
-              {connectError && <p className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{connectError}</p>}
+              <div className="relative">
+                <Input
+                  value={repositoryInput}
+                  onChange={(event) => onRepositoryInputChange?.(event.target.value)}
+                  className="h-12 rounded-2xl pr-11"
+                />
+                {repositoryInput && (
+                  <button
+                    type="button"
+                    aria-label="Clear repository URL"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    onClick={() => onRepositoryInputChange?.('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -198,7 +211,7 @@ export default function ConnectRepoView({
                       </div>
                       <Button
                         variant={alreadyConnected ? 'outline' : 'ghost'}
-                        className="shrink-0 rounded-xl"
+                        className="h-10 w-24 shrink-0 justify-center rounded-xl text-center"
                         onClick={() => onOpenRecent?.(recentRepo.name)}
                         disabled={isActive}
                       >
