@@ -9,6 +9,21 @@ function timestampToMs(value) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+
+const BADGE_RULES = [
+  { label: 'Merge Hero', test: (row) => Number(row.mergedPRs ?? 0) >= 5 },
+  { label: 'Review Guardian', test: (row) => Number(row.reviews ?? 0) >= 5 },
+  { label: 'Commit Streak', test: (row) => Number(row.commits ?? 0) >= 20 },
+  { label: 'Quest Finisher', test: (row) => Number(row.requestBonusXp ?? 0) > 0 },
+];
+
+function buildBadges(row) {
+  const knownLabels = new Set(BADGE_RULES.map((rule) => rule.label));
+  const existing = Array.isArray(row.badges) ? row.badges.filter((badge) => knownLabels.has(badge)) : [];
+  if (existing.length) return existing;
+  return BADGE_RULES.filter((rule) => rule.test(row)).map((rule) => rule.label);
+}
+
 function mapFirebaseRecordToPlayer(row) {
   const username = String(row.username ?? '').trim() || 'unknown';
   const displayName = typeof row.displayName === 'string' && row.displayName.trim() ? row.displayName.trim() : username;
@@ -42,9 +57,8 @@ function mapFirebaseRecordToPlayer(row) {
     createdAtMs: Number(row.createdAtMs ?? 0) || timestampToMs(row.createdAt) || timestampToMs(row.updatedAt),
     requestBonusXp: Number(row.requestBonusXp ?? 0),
     questBonusXp: Number(row.requestBonusXp ?? 0),
-    trend: row.trend ?? '',
     streak: Number(row.streak ?? 0),
-    badges: Array.isArray(row.badges) && row.badges.length ? row.badges : ['Contributor'],
+    badges: buildBadges(row),
   };
 }
 

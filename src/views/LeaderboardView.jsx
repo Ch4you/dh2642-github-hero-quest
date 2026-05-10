@@ -18,7 +18,6 @@ function RankBadge({ index }) {
 }
 
 export default function LeaderboardView({
-  repo,
   onSelectPlayer,
   rows = [],
   filter,
@@ -59,6 +58,7 @@ export default function LeaderboardView({
           </Tabs>
         </div>
       </div>
+
 
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <Card className="rounded-[28px] border-slate-200 shadow-sm">
@@ -103,7 +103,7 @@ export default function LeaderboardView({
                   </Avatar>
                   <div>
                     <div className="font-medium text-slate-900">{player.name}</div>
-                    <div className="text-sm text-slate-500">{player.badges?.[0] ?? '—'}</div>
+                    <div className="text-sm text-slate-500">{player.badges?.[0] ?? 'No badge yet'}</div>
                   </div>
                 </div>
                 <div className="font-semibold text-slate-900">{player.rankXp ?? player.xp}</div>

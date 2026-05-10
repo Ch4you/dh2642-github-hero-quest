@@ -1,25 +1,25 @@
 export const REQUEST_METRIC_TYPES = [
   {
     value: 'repoMergedPRs',
-    label: 'Team merged PRs',
+    label: 'Merged PRs',
     description: 'Merged pull requests in this repository during the goal date range. Bonus XP is shared by contribution.',
     contributionLabel: 'Your merged PRs',
   },
   {
     value: 'repoCommits',
-    label: 'Team commits',
+    label: 'Commits',
     description: 'Commits in this repository during the goal date range. Bonus XP is shared by authored commits.',
     contributionLabel: 'Your commits',
   },
   {
     value: 'repoOpenPRs',
-    label: 'Team open PRs',
+    label: 'Open PRs',
     description: 'Open pull requests created in this repository during the goal date range. Bonus XP is shared by authored PRs.',
     contributionLabel: 'Your open PRs',
   },
   {
     value: 'repoReviews',
-    label: 'Team reviewed PRs',
+    label: 'Reviewed PRs',
     description: 'Pull requests with review activity during the goal date range. Bonus XP is shared by review contribution.',
     contributionLabel: 'Your reviewed PRs',
   },
@@ -125,5 +125,3 @@ export class RequestModel {
   }
 }
 
-// Backwards-compatible alias: older files still import QuestModel during the refactor.
-export class QuestModel extends RequestModel {}

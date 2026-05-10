@@ -7,28 +7,36 @@ function formatRangeDate(date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function isoDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
 function getLastSevenDaysRange(now = new Date()) {
   const end = new Date(now);
   const start = new Date(now);
   start.setDate(start.getDate() - 6);
   return {
-    since: start.toISOString().slice(0, 10),
-    until: end.toISOString().slice(0, 10),
+    since: isoDate(start),
+    until: isoDate(end),
     label: `${formatRangeDate(start)} – ${formatRangeDate(end)}`,
   };
 }
 
-function getAllTimeLabel(rows, now = new Date()) {
-  const timestamps = rows
-    .map((row) => Number(row.allTimeSyncedAtMs || row.updatedAtMs || 0))
-    .filter(Boolean);
-
-  if (timestamps.length === 0) {
-    return `All synced data through ${formatRangeDate(now)}`;
+function getAllTimeRangeLabel(repoCreatedAt, rows = [], now = new Date()) {
+  const repoCreatedAtMs = Date.parse(repoCreatedAt || '');
+  if (Number.isFinite(repoCreatedAtMs) && repoCreatedAtMs <= now.getTime()) {
+    return `${formatRangeDate(new Date(repoCreatedAtMs))} – ${formatRangeDate(now)}`;
   }
 
-  const start = new Date(Math.min(...timestamps));
-  return `${formatRangeDate(start)} – ${formatRangeDate(now)}`;
+  const timestamps = rows
+    .map((row) => Number(row.createdAtMs || row.allTimeSyncedAtMs || row.updatedAtMs || 0))
+    .filter(Boolean);
+
+  if (timestamps.length) {
+    return `${formatRangeDate(new Date(Math.min(...timestamps)))} – ${formatRangeDate(now)}`;
+  }
+
+  return 'All time';
 }
 
 function getFreshWeeklyXp(row) {
@@ -54,20 +62,22 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
     return rows.sort((a, b) => getFreshWeeklyXp(b) - getFreshWeeklyXp(a));
   }, [store.leaderboard, filter]);
 
-  const timeRangeLabel = filter === 'All time' ? getAllTimeLabel(rankedRows) : getLastSevenDaysRange().label;
-
   const visibleRows = useMemo(() => {
     const rowsWithDisplayXp = rankedRows.map((row) => ({
       ...row,
       rankXp: filter === 'All time' ? Number(row.xp ?? 0) : getFreshWeeklyXp(row),
     }));
-    const q = store.leaderboardStore.searchQuery?.trim?.().toLowerCase?.() || '';
-    if (!q) return rowsWithDisplayXp;
+    const query = store.leaderboardStore.searchQuery?.trim?.().toLowerCase?.() || '';
+    if (!query) return rowsWithDisplayXp;
     return rowsWithDisplayXp.filter((row) => {
       const haystack = [row.name, row.username, ...(row.badges ?? [])].join(' ').toLowerCase();
-      return haystack.includes(q);
+      return haystack.includes(query);
     });
   }, [rankedRows, store.leaderboardStore.searchQuery, filter]);
+
+  const timeRangeLabel = filter === 'All time'
+    ? getAllTimeRangeLabel(store.repo?.createdAt, visibleRows)
+    : getLastSevenDaysRange().label;
 
   function handleFilterChange(nextFilter) {
     store.setLeaderboardFilter(nextFilter);
@@ -85,7 +95,6 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
 
   return (
     <LeaderboardView
-      repo={store.repo}
       rows={visibleRows}
       filter={filter}
       onFilterChange={handleFilterChange}

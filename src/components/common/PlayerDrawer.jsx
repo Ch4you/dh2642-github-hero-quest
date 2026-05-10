@@ -1,32 +1,28 @@
-import { useMemo } from 'react';
 import { Award, Flame, GitCommitHorizontal, GitPullRequest, ShieldCheck } from 'lucide-react';
 import { Badge } from '../ui/badge.jsx';
 import { Avatar, AvatarFallback } from '../ui/avatar.jsx';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card.jsx';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card.jsx';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet.jsx';
-import { getXpBreakdown } from '../../models/scoreRules.js';
+import InfoTip from '../../views/shared/InfoTip.jsx';
 
 const badgeDescriptions = {
-  Contributor: 'Synced activity for this repository.',
-  'Merge Hero': 'Strong merged pull request contribution.',
-  'Review Guardian': 'Helped the team by reviewing pull requests.',
-  'Commit Streak': 'Maintained consistent repository activity.',
-  'Quest Finisher': 'Contributed to completed team requests.',
+  'Merge Hero': 'At least 5 merged pull requests in this repository.',
+  'Review Guardian': 'At least 5 reviewed pull requests in this repository.',
+  'Commit Streak': 'At least 20 commits in this repository.',
+  'Quest Finisher': 'Earned XP from completed team goals.',
 };
 
+const totalBadgeTypes = Object.keys(badgeDescriptions).length;
+
 function badgeDescription(badge) {
-  return badgeDescriptions[badge] ?? 'Achievement unlocked from synced repository activity.';
+  return badgeDescriptions[badge] ?? 'Repository achievement.';
 }
 
-export default function PlayerDrawer({ player, open, onOpenChange }) {
+export default function PlayerDrawer({ player, xpBreakdown = [], periodLabel = '', open, onOpenChange }) {
   const initials = player?.initials ?? '';
-
-  const xpBreakdown = useMemo(() => {
-    if (!player) return [];
-    return getXpBreakdown(player);
-  }, [player]);
-
   if (!player) return null;
+  const earnedBadges = Array.isArray(player.badges) ? player.badges.filter((badge) => badgeDescriptions[badge]) : [];
+  const summaryTitle = periodLabel ? `${periodLabel} summary` : 'This period summary';
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -48,7 +44,7 @@ export default function PlayerDrawer({ player, open, onOpenChange }) {
         <div className="mt-8 space-y-6">
           <Card className="rounded-3xl">
             <CardHeader>
-              <CardTitle className="text-base">This period summary</CardTitle>
+              <CardTitle className="text-base">{summaryTitle}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="rounded-2xl bg-slate-50 p-4">
@@ -80,8 +76,10 @@ export default function PlayerDrawer({ player, open, onOpenChange }) {
 
           <Card className="rounded-3xl">
             <CardHeader>
-              <CardTitle className="text-base">XP breakdown</CardTitle>
-              <CardDescription>Transparent scoring so users understand why they rank here.</CardDescription>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">XP breakdown</CardTitle>
+                <InfoTip label="XP breakdown information">XP is calculated by the presenter from synced repository activity and the current scoring rules.</InfoTip>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {xpBreakdown.map((item) => (
@@ -93,25 +91,28 @@ export default function PlayerDrawer({ player, open, onOpenChange }) {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle className="text-base">Badges</CardTitle>
-              <CardDescription>Badge names and meanings are shown directly, without relying on hover.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {player.badges.map((badge) => (
-                <div key={badge} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-800 shadow-sm">
-                      <Award className="h-4 w-4" />
-                    </div>
-                    <Badge className="border-slate-200 bg-white text-slate-800">{badge}</Badge>
-                  </div>
-                  <p className="mt-2 text-sm leading-5 text-slate-600">{badgeDescription(badge)}</p>
+          {earnedBadges.length > 0 && (
+            <Card className="rounded-3xl">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-base">Badges</CardTitle>
+                  <InfoTip label="Badge information">{earnedBadges.length} of {totalBadgeTypes} badge types earned.</InfoTip>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {earnedBadges.map((badge) => (
+                  <div key={badge} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-800 shadow-sm">
+                        <Award className="h-4 w-4" />
+                      </div>
+                      <Badge className="border-slate-200 bg-white text-slate-800" title={badgeDescription(badge)}>{badge}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </SheetContent>
     </Sheet>

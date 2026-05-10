@@ -35,7 +35,6 @@ const ConnectRepoPresenter = observer(function ConnectRepoPresenter() {
       repositoryInput={store.repositoryInput}
       onRepositoryInputChange={store.setRepositoryInput}
       onConnect={() => repository.connectRepositoryFromInput()}
-      onUseSample={() => repository.connectSampleRepository()}
       onOpenRecent={(repoName) => repository.connectRecentRepository(repoName)}
       recentRepositories={store.recentRepositories}
       recentLoading={store.recentLoading}

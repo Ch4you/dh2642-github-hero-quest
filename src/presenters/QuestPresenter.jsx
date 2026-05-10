@@ -9,7 +9,7 @@ function makeEmptyForm(repoKey) {
     id: '',
     title: '',
     description: '',
-    metricType: 'repoMergedPRs',
+    metricType: '',
     targetValue: '',
     startDate: todayDateString(),
     endDate: addDaysDateString(7),
@@ -21,10 +21,10 @@ function makeEmptyForm(repoKey) {
 function formFromRequest(request, repoKey) {
   if (!request) return makeEmptyForm(repoKey);
   return {
-    id: request.id,
-    title: request.title,
+    id: request.id || '',
+    title: request.title || '',
     description: request.description ?? '',
-    metricType: request.metricType ?? 'repoMergedPRs',
+    metricType: request.metricType ?? '',
     targetValue: String(request.targetValue ?? ''),
     startDate: request.startDate || todayDateString(),
     endDate: request.endDate || addDaysDateString(7),
@@ -52,10 +52,14 @@ function buildMemberRows(goal, leaderboard, allUserContributionsById) {
   });
 }
 
+function isEditableStatus(status) {
+  return status === 'scheduled' || status === 'active';
+}
+
 const QuestPresenter = observer(function QuestPresenter() {
   const store = useStore();
   const { quest } = useControllers();
-  const [form, setForm] = useState(() => store.requestDraft ?? makeEmptyForm(store.repoKeyString));
+  const [form, setForm] = useState(() => formFromRequest(store.requestDraft, store.repoKeyString));
   const [statusFilter, setStatusFilter] = useState('active');
   const [formOpen, setFormOpen] = useState(false);
   const [detailGoalId, setDetailGoalId] = useState('');
@@ -104,7 +108,7 @@ const QuestPresenter = observer(function QuestPresenter() {
       current: existingValue,
       pct,
       status,
-      metricLabel: getMetricLabel(form.metricType),
+      metricLabel: form.metricType ? getMetricLabel(form.metricType) : 'Choose a metric',
     };
   }, [form, store.requestMetricsById]);
 
@@ -122,9 +126,9 @@ const QuestPresenter = observer(function QuestPresenter() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function buildPayload() {
+  function buildPayload({ draft = false } = {}) {
     return {
-      id: form.id || undefined,
+      id: draft ? '' : form.id || undefined,
       title: form.title,
       description: form.description,
       metricType: form.metricType,
@@ -136,25 +140,49 @@ const QuestPresenter = observer(function QuestPresenter() {
   }
 
   function startNewRequest() {
-    setForm(makeEmptyForm(store.repoKeyString));
+    setForm(formFromRequest(store.requestDraft, store.repoKeyString));
     setFormOpen(true);
   }
 
+  function clearForm() {
+    setForm(makeEmptyForm(store.repoKeyString));
+  }
+
   function editRequest(requestId) {
-    const request = store.requests.find((item) => item.id === requestId);
+    const request = requestRows.find((item) => item.id === requestId);
+    if (!request || !isEditableStatus(request.status)) {
+      store.setFlashMessage('Only scheduled and active goals can be edited.');
+      return;
+    }
     setForm(formFromRequest(request, store.repoKeyString));
     setDetailGoalId('');
     setFormOpen(true);
   }
 
-  async function saveRequestAndClose() {
-    if (!formValid) return;
+  async function persistCurrentForm() {
     await quest.saveRequest(buildPayload());
     setFormOpen(false);
   }
 
+  async function saveRequestAndClose() {
+    if (!formValid) return;
+    const editing = Boolean(form.id);
+    if (editing && !isEditableStatus(preview.status)) {
+      store.requestConfirmation({
+        title: `Save as ${preview.status} goal?`,
+        message: `This update changes the goal status to ${preview.status}. After saving it, the goal can still be deleted but can no longer be edited.`,
+        confirmLabel: 'Save goal',
+        onConfirm: () => {
+          void persistCurrentForm();
+        },
+      });
+      return;
+    }
+    await persistCurrentForm();
+  }
+
   function saveDraftAndClose() {
-    quest.saveDraft(buildPayload());
+    quest.saveDraft(buildPayload({ draft: true }));
     setFormOpen(false);
   }
 
@@ -182,13 +210,12 @@ const QuestPresenter = observer(function QuestPresenter() {
       statusCounts={statusCounts}
       selectedGoal={selectedGoal}
       memberContributionRows={memberContributionRows}
-      repo={store.repo}
       preview={preview}
       requests={visibleRequests}
-      allRequests={requestRows}
       metricTypes={REQUEST_METRIC_TYPES}
       onFieldChange={updateField}
       onNewRequest={startNewRequest}
+      onClearForm={clearForm}
       onCloseForm={() => setFormOpen(false)}
       onStatusFilterChange={setStatusFilter}
       onViewRequest={setDetailGoalId}

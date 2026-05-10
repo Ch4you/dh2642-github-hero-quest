@@ -19,15 +19,22 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import {
+  fromAuthProfileDoc,
   fromMergedPullRequestDetailsDoc,
   fromRequestMetricsDoc,
   fromRequestsDoc,
+  fromScoreRulesDoc,
+  fromUserDoc,
+  fromUserProgressDoc,
   fromWorkspaceDoc,
   getWorkspaceDocId,
   normalizeRepoKey,
+  toAuthProfileDoc,
   toMergedPullRequestDetailsDoc,
   toRequestMetricsDoc,
   toRequestsDoc,
+  toScoreRulesDoc,
+  toUserDoc,
   toUserProgressDoc,
   toWorkspaceDoc,
 } from '../models/fireModels';
@@ -46,7 +53,6 @@ const USERS_COLLECTION = 'heroquest-users';
 const USER_PROGRESS_COLLECTION = 'heroquest-user-progress';
 const LEADERBOARD_COLLECTION = 'heroquest-leaderboard';
 const AUTH_PROFILE_COLLECTION = 'heroquest-auth-profile';
-const QUESTS_COLLECTION = 'heroquest-quests';
 const REQUESTS_COLLECTION = 'heroquest-requests';
 const SCORE_RULES_COLLECTION = 'heroquest-score-rules';
 const WORKSPACES_COLLECTION = 'heroquest-workspaces';
@@ -80,21 +86,20 @@ function getAuthInstance() {
 }
 
 export async function saveUserData(data) {
-  if (!data?.username) throw new Error('saveUserData: data.username is required');
+  const userDoc = toUserDoc(data);
   const db = getDb();
-  await setDoc(doc(db, USERS_COLLECTION, data.username), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+  await setDoc(doc(db, USERS_COLLECTION, userDoc.username), { ...userDoc, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 export async function getUserData(username) {
   if (!username) throw new Error('getUserData: username is required');
   const db = getDb();
   const snap = await getDoc(doc(db, USERS_COLLECTION, username));
-  return snap.exists() ? snap.data() : null;
+  return snap.exists() ? fromUserDoc(snap.data()) : null;
 }
 
 export async function saveUserProgress(progress) {
   if (!progress?.username) throw new Error('saveUserProgress: progress.username is required');
-
   const db = getDb();
   const repoKey = normalizeRepoKey(progress.repoKey);
   const progressDocId = `${progress.username}__${repoKey}`;
@@ -103,7 +108,6 @@ export async function saveUserProgress(progress) {
   const existingProgress = await getDoc(progressDocRef);
   const existingLeaderboard = await getDoc(leaderboardDocRef);
   const hasExisting = existingProgress.exists() || existingLeaderboard.exists();
-
   const payload = {
     ...toUserProgressDoc(progress, { hasExisting }),
     updatedAt: serverTimestamp(),
@@ -129,7 +133,7 @@ export function subscribeLeaderboard({ repoKey = 'default', maxRows = 20, onUpda
     leaderboardQuery,
     (snapshot) => {
       const records = snapshot.docs
-        .map((item) => ({ id: item.id, ...item.data() }))
+        .map((item) => fromUserProgressDoc({ id: item.id, ...item.data() }))
         .sort((a, b) => Number(b.xp ?? 0) - Number(a.xp ?? 0))
         .slice(0, rows);
       onUpdate(records);
@@ -140,15 +144,13 @@ export function subscribeLeaderboard({ repoKey = 'default', maxRows = 20, onUpda
   );
 }
 
-export async function saveAuthProfile({ uid, username, displayName, avatarUrl }) {
-  if (!uid || !username?.trim()) return;
+export async function saveAuthProfile(profile) {
+  if (!profile?.uid || !profile?.username?.trim()) return;
   const db = getDb();
   await setDoc(
-    doc(db, AUTH_PROFILE_COLLECTION, uid),
+    doc(db, AUTH_PROFILE_COLLECTION, profile.uid),
     {
-      username: username.trim(),
-      displayName: displayName?.trim() || username.trim(),
-      avatarUrl: avatarUrl || '',
+      ...toAuthProfileDoc(profile),
       updatedAt: serverTimestamp(),
     },
     { merge: true },
@@ -163,18 +165,13 @@ export function subscribeAuthState(onChange) {
       onChange(null);
       return;
     }
+    const fallback = { uid: user.uid, username: '', displayName: '', avatarUrl: user.photoURL || '' };
     try {
       const db = getDb();
       const snap = await getDoc(doc(db, AUTH_PROFILE_COLLECTION, user.uid));
-      const fromDb = snap.exists() ? snap.data() : null;
-      onChange({
-        uid: user.uid,
-        username: fromDb?.username || '',
-        displayName: fromDb?.displayName || '',
-        avatarUrl: fromDb?.avatarUrl || user.photoURL || '',
-      });
+      onChange(snap.exists() ? fromAuthProfileDoc(snap.data(), fallback) : fallback);
     } catch {
-      onChange({ uid: user.uid, username: '', displayName: '', avatarUrl: user.photoURL || '' });
+      onChange(fallback);
     }
   });
 }
@@ -204,37 +201,6 @@ export async function signInWithGitHubPopup() {
 export async function signOutCurrentUser() {
   if (!isFirebaseConfigured()) return;
   await signOut(getAuthInstance());
-}
-
-export async function saveQuestForRepo({ repoKey, quest, updatedBy }) {
-  if (!repoKey) throw new Error('saveQuestForRepo: repoKey is required');
-  const db = getDb();
-  const cleanRepoKey = normalizeRepoKey(repoKey);
-  await setDoc(
-    doc(db, QUESTS_COLLECTION, cleanRepoKey),
-    {
-      ...quest,
-      repoKey: cleanRepoKey,
-      updatedBy: updatedBy || '',
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-}
-
-export function subscribeQuestForRepo({ repoKey, onUpdate, onError }) {
-  if (!repoKey || typeof onUpdate !== 'function') return () => {};
-  const db = getDb();
-  const cleanRepoKey = normalizeRepoKey(repoKey);
-  return onSnapshot(
-    doc(db, QUESTS_COLLECTION, cleanRepoKey),
-    (snapshot) => {
-      if (snapshot.exists()) onUpdate(snapshot.data());
-    },
-    (error) => {
-      if (typeof onError === 'function') onError(error);
-    },
-  );
 }
 
 export async function saveRequestsForRepo({ repoKey, requests, updatedBy }) {
@@ -275,7 +241,7 @@ export async function saveScoreRulesForRepo({ repoKey, scoreRules }) {
   const db = getDb();
   await setDoc(
     doc(db, SCORE_RULES_COLLECTION, normalizeRepoKey(repoKey)),
-    { ...scoreRules, updatedAt: serverTimestamp() },
+    { ...toScoreRulesDoc(scoreRules), updatedAt: serverTimestamp() },
     { merge: true },
   );
 }
@@ -284,9 +250,8 @@ export async function getScoreRulesForRepo(repoKey) {
   if (!repoKey) return null;
   const db = getDb();
   const snap = await getDoc(doc(db, SCORE_RULES_COLLECTION, normalizeRepoKey(repoKey)));
-  return snap.exists() ? snap.data() : null;
+  return snap.exists() ? fromScoreRulesDoc(snap.data()) : null;
 }
-
 
 export async function saveRequestMetricsForRepo({ repoKey, username, valuesById, contributionsById, syncedAtMs }) {
   if (!repoKey) throw new Error('saveRequestMetricsForRepo: repoKey is required');
@@ -318,7 +283,6 @@ export async function getRequestMetricsForRepo({ repoKey, username }) {
   const db = getDb();
   const cleanRepoKey = normalizeRepoKey(repoKey);
   const snap = await getDoc(doc(db, REQUEST_METRICS_COLLECTION, cleanRepoKey));
-
   if (!snap.exists()) return null;
   return fromRequestMetricsDoc(snap.data(), username);
 }

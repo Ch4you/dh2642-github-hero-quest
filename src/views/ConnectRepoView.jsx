@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Badge } from '../components/ui/badge.jsx';
+import InfoTip from './shared/InfoTip.jsx';
 
 function repoKey(repo) {
   return repo?.owner && repo?.name ? `${repo.owner}/${repo.name}` : '';
@@ -18,11 +19,16 @@ function XpRulesModal({ open, onClose, repositories = [], selectedRepoKey, onSel
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
       <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} />
-      <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+      <div className="relative max-h-[90vh] w-full max-w-xl overflow-visible rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">Team scoring settings</div>
-            <h2 className="mt-3 text-2xl font-bold text-slate-900">Team XP rules</h2>
+            <div className="mt-3 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-slate-900">Team XP rules</h2>
+              <InfoTip label="Team XP rules information">
+                These rules are shared by the team for the selected repository and affect leaderboard scoring. Different repositories can use different XP standards. Selecting another repository loads its saved team rules into this form before you edit or save.
+              </InfoTip>
+            </div>
             <p className="mt-1 text-sm text-slate-600">Shared rules for <span className="font-semibold text-slate-900">{selectedLabel}</span>.</p>
           </div>
           <button type="button" className="rounded-2xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" onClick={onClose}>
@@ -50,10 +56,6 @@ function XpRulesModal({ open, onClose, repositories = [], selectedRepoKey, onSel
               })}
             </select>
           </label>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            These rules are shared by the team for the selected repository and affect leaderboard scoring. Different repositories can use different XP standards. Selecting another repository loads its saved team rules into this form before you edit or save.
-          </div>
 
           <div className="grid gap-3">
             {[
@@ -98,7 +100,6 @@ export default function ConnectRepoView({
   repositoryInput,
   onRepositoryInputChange,
   onConnect,
-  onUseSample,
   onOpenRecent,
   recentRepositories = [],
   recentLoading = false,

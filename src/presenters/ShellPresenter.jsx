@@ -1,22 +1,16 @@
-import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useControllers, useStore } from '../stores/StoreProvider.jsx';
 import AppShellView from '../views/AppShellView.jsx';
 
+function buildInviteMessage(repoKey) {
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  return `Join our GitHub Hero Quest workspace for ${repoKey}. Open ${appUrl} and sign in with GitHub, then connect ${repoKey} to sync your contribution data.`;
+}
+
 const ShellPresenter = observer(function ShellPresenter({ current, children }) {
   const store = useStore();
   const { auth, repository } = useControllers();
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const cooldownRemainingMs = store.repoKeyString
-    ? Math.max(0, store.syncCooldownMs - (now - store.activeRepoLastSyncStartedAt))
-    : 0;
-  const canSync = Boolean(store.repoKeyString) && !store.isLoading && cooldownRemainingMs <= 0;
+  const canSync = Boolean(store.repoKeyString) && !store.isLoading;
 
   function requestRemoveRepository(repoKey) {
     if (store.repositories.length <= 1) {
@@ -33,6 +27,17 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
     });
   }
 
+  async function copyInvite() {
+    const repoKey = store.repoKeyString || 'this repository';
+    const message = buildInviteMessage(repoKey);
+    try {
+      await navigator.clipboard.writeText(message);
+      store.setFlashMessage('Invite copied. Send it to teammates who have not synced yet.');
+    } catch {
+      store.setFlashMessage(message);
+    }
+  }
+
   return (
     <AppShellView
       current={current}
@@ -44,7 +49,6 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
       onNavigate={store.setStep}
       onSync={() => repository.syncCurrentPage()}
       canSync={canSync}
-      syncCooldownRemainingMs={cooldownRemainingMs}
       profile={store.profile}
       profileInitials={store.profileInitials}
       onSignOut={() => auth.signOut()}
@@ -53,14 +57,10 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
       loadingPhase={store.loadingPhase}
       flashMessage={store.flashMessage}
       onDismissFlashMessage={store.clearFlashMessage}
-      notifications={store.notifications}
-      notificationsOpen={store.notificationsOpen}
-      onToggleNotifications={store.toggleNotifications}
-      onCloseNotifications={store.closeNotifications}
-      onClearNotifications={store.clearNotifications}
       confirmation={store.confirmation}
       onCancelConfirmation={store.closeConfirmation}
       onConfirmConfirmation={store.confirmCurrentAction}
+      onCopyInvite={copyInvite}
     >
       {children}
     </AppShellView>

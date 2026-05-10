@@ -8,7 +8,7 @@ import {
   subscribeRequestsForRepo,
 } from '../services/firebaseService.js';
 
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 10 * 60_000;
 
 function isFresh(timestampMs, ttlMs = CACHE_TTL_MS) {
   return Number.isFinite(Number(timestampMs)) && Date.now() - Number(timestampMs) < ttlMs;
@@ -20,7 +20,7 @@ export class QuestController {
   }
 
   startForActiveRepository() {
-    this.store.stopQuestSubscription();
+    this.store.stopRequestSubscription();
     if (!isFirebaseConfigured() || !this.store.repoKeyString) return;
 
     try {
@@ -35,7 +35,7 @@ export class QuestController {
           this.store.addNotification(`Goal sync failed: ${error?.message ?? 'unknown'}`, 'Goal error', 'error');
         },
       });
-      this.store.setQuestUnsubscribe(unsubscribe);
+      this.store.setRequestUnsubscribe(unsubscribe);
     } catch (error) {
       this.store.addNotification(`Goal subscription failed: ${error?.message ?? 'unknown'}`, 'Goal error', 'error');
     }
@@ -106,8 +106,7 @@ export class QuestController {
     this.store.upsertRequest(nextRequest);
     await this.persistRequests();
     await this.loadCachedRequestMetrics();
-    this.store.addNotification(`Goal saved for ${this.store.repoKeyString}`, 'Request saved', 'success');
-    this.store.setStep('dashboard');
+    this.store.addNotification('Goal saved.', 'Goal saved', 'success');
   }
 
   async deleteRequest(requestId) {
@@ -116,7 +115,7 @@ export class QuestController {
     this.store.removeRequest(requestId);
     await this.persistRequests();
     await this.loadCachedRequestMetrics();
-    this.store.addNotification(`Deleted goal “${request.title}”.`, 'Goal deleted', 'success');
+    this.store.addNotification('Goal deleted.', 'Goal deleted', 'success');
   }
 
   async refreshRequestMetrics({ force = false } = {}) {
@@ -181,15 +180,6 @@ export class QuestController {
 
   saveDraft(payload) {
     this.store.saveRequestDraft(payload);
-    this.store.setStep('dashboard');
   }
 
-  // Backwards-compatible method name used by older presenters.
-  saveQuest(payload) {
-    return this.saveRequest({
-      ...payload,
-      targetValue: payload?.targetValue ?? payload?.targetMergedPRs,
-      metricType: payload?.metricType ?? 'repoMergedPRs',
-    });
-  }
 }
