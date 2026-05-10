@@ -31,6 +31,7 @@ export class AppStore {
   get repositoryContributors() { return this.workspace.repositoryContributors; }
   get repositoryContributorsSyncedAtMs() { return this.workspace.repositoryContributorsSyncedAtMs; }
   get repositoryContributorsLoading() { return this.workspace.repositoryContributorsLoading; }
+  get repositoryContributorsError() { return this.workspace.repositoryContributorsError; }
   get repositories() { return this.workspace.repositories; }
   get repositoryInput() { return this.workspace.repositoryInput; }
   get recentRepositories() { return this.workspace.recentRepositories; }
@@ -95,6 +96,7 @@ export class AppStore {
   setMergedPullRequests = (items, syncedAtMs) => this.workspace.setMergedPullRequests(items, syncedAtMs);
   setRepositoryContributors = (items, syncedAtMs) => this.workspace.setRepositoryContributors(items, syncedAtMs);
   setRepositoryContributorsLoading = (value) => this.workspace.setRepositoryContributorsLoading(value);
+  setRepositoryContributorsError = (message) => this.workspace.setRepositoryContributorsError(message);
   setScoreRules = (rules) => this.workspace.setScoreRules(rules);
   setLastSyncedAt = (value) => this.workspace.setLastSyncedAt(value);
   clearSyncErrors = () => this.workspace.clearSyncErrors();

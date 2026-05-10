@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import StatusPill from '../components/common/StatusPill.jsx';
 import { ChevronDown, HelpCircle, LogOut, Medal, RefreshCw, Settings, Target, Trophy, UserCircle2 } from 'lucide-react';
 import { Button } from '../components/ui/button.jsx';
@@ -51,7 +51,6 @@ export default function AppShellView({
   isLoading,
   loadingPhase,
   flashMessage,
-  onDismissFlashMessage,
   confirmation,
   onCancelConfirmation,
   onConfirmConfirmation,
@@ -70,11 +69,6 @@ export default function AppShellView({
   useClickOutside({ open: profileMenuOpen, refs: profileOutsideRefs, onClose: () => setProfileMenuOpen(false) });
   useClickOutside({ open: repoMenuOpen, refs: repoOutsideRefs, onClose: () => setRepoMenuOpen(false) });
 
-  useEffect(() => {
-    if (!flashMessage) return undefined;
-    const timer = window.setTimeout(() => onDismissFlashMessage?.(), 3000);
-    return () => window.clearTimeout(timer);
-  }, [flashMessage, onDismissFlashMessage]);
 
   const displayName = profile?.displayName?.trim() || profile?.username?.trim() || 'Guest';
   const username = profile?.username?.trim() || '';

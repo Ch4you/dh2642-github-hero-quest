@@ -79,10 +79,10 @@ const DashboardPresenter = observer(function DashboardPresenter() {
     }));
   }, [store.hero, store.scoreRules]);
 
-  const contributorsLoaded = Number(store.repositoryContributorsSyncedAtMs) > 0;
+  const hasContributorData = store.repositoryContributors.length > 0 && Number(store.repositoryContributorsSyncedAtMs) > 0;
 
   const teammateRows = useMemo(() => {
-    if (!contributorsLoaded) return [];
+    if (!hasContributorData) return [];
 
     const syncedByUsername = new Map(store.leaderboard.map((player) => [player.username, player]));
     return store.repositoryContributors
@@ -98,24 +98,24 @@ const DashboardPresenter = observer(function DashboardPresenter() {
         };
       })
       .sort((a, b) => Number(b.synced) - Number(a.synced) || Number(b.contributions ?? 0) - Number(a.contributions ?? 0) || a.username.localeCompare(b.username));
-  }, [contributorsLoaded, store.repositoryContributors, store.leaderboard]);
+  }, [hasContributorData, store.repositoryContributors, store.leaderboard]);
 
-  const syncedContributorCount = contributorsLoaded ? teammateRows.filter((row) => row.synced).length : 0;
-  const totalContributorCount = contributorsLoaded ? teammateRows.length : 0;
-  const syncedContributorLabel = contributorsLoaded ? `${syncedContributorCount}/${totalContributorCount}` : 'Loading…';
+  const syncedContributorCount = hasContributorData ? teammateRows.filter((row) => row.synced).length : 0;
+  const totalContributorCount = hasContributorData ? teammateRows.length : 0;
+  const syncedContributorLabel = hasContributorData ? `${syncedContributorCount}/${totalContributorCount}` : store.repositoryContributorsLoading ? 'Loading…' : '—';
 
   const repoLabel = store.repoKeyString;
 
   useEffect(() => {
     if (repoLabel) {
-      void repository.loadRepositoryContributors();
+      void repository.loadRepositoryContributors({ source: 'background' });
     }
   }, [repoLabel, repository]);
 
   function handleModalOpen(type) {
     if (!repoLabel) return;
     if (type === 'merged') void repository.loadMergedPullRequestDetails();
-    if (type === 'teammates') void repository.loadRepositoryContributors();
+    if (type === 'teammates') void repository.loadRepositoryContributors({ source: 'manual' });
   }
 
   async function copyInvite(username = '') {
@@ -140,7 +140,8 @@ const DashboardPresenter = observer(function DashboardPresenter() {
       openRequestsCount={store.activeRequestCount}
       xpSubtitle="Your GitHub contribution XP"
       teammates={teammateRows}
-      teammatesLoading={store.repositoryContributorsLoading || !contributorsLoaded}
+      teammatesLoading={store.repositoryContributorsLoading && !hasContributorData}
+      teammatesError={store.repositoryContributorsError}
       onSelectPlayer={store.selectPlayer}
       activeGoals={activeGoalCards}
       allUserContributionsById={store.allUserRequestContributionsById}

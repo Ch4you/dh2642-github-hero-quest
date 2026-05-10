@@ -291,3 +291,37 @@ export function fromMergedPullRequestDetailsDoc(data = {}) {
     syncedAtMs: Number(data.syncedAtMs ?? 0),
   };
 }
+
+export function normalizeRepositoryContributorList(items = []) {
+  const seen = new Set();
+  return (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      username: String(item?.username || item?.login || '').trim(),
+      avatarUrl: String(item?.avatarUrl || item?.avatar_url || ''),
+      profileUrl: String(item?.profileUrl || item?.html_url || ''),
+      contributions: Number(item?.contributions ?? 0),
+    }))
+    .filter((item) => item.username)
+    .filter((item) => {
+      const key = item.username.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => Number(b.contributions ?? 0) - Number(a.contributions ?? 0) || a.username.localeCompare(b.username));
+}
+
+export function toRepositoryContributorsDoc({ repoKey, items, syncedAtMs } = {}) {
+  return {
+    repoKey: normalizeRepoKey(repoKey),
+    items: normalizeRepositoryContributorList(items),
+    syncedAtMs: Number(syncedAtMs ?? Date.now()),
+  };
+}
+
+export function fromRepositoryContributorsDoc(data = {}) {
+  return {
+    items: normalizeRepositoryContributorList(data.items),
+    syncedAtMs: Number(data.syncedAtMs ?? 0),
+  };
+}

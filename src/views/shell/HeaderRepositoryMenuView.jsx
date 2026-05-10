@@ -64,12 +64,25 @@ export default function HeaderRepositoryMenuView({ repoLabel, repositories = [],
                   >
                     <button
                       type="button"
-                      onClick={() => onSwitchRepository?.(key)}
+                      onClick={() => !active && onSwitchRepository?.(key)}
                       title={key}
-                      className="min-w-0 flex-1 rounded-xl px-2.5 py-2 text-left text-sm text-slate-700 transition hover:bg-white"
+                      disabled={active}
+                      className={cn(
+                        'min-w-0 flex-1 rounded-xl px-2.5 py-2 text-left text-sm text-slate-700 transition',
+                        active ? 'cursor-default' : 'hover:bg-white',
+                      )}
                     >
                       <span className={cn('block truncate', active ? 'font-semibold text-slate-900' : 'font-medium')}>{key}</span>
                     </button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn('h-8 shrink-0 rounded-xl border-slate-200 px-3 text-xs', active && 'cursor-default opacity-70')}
+                      disabled={active}
+                      onClick={() => onSwitchRepository?.(key)}
+                    >
+                      {active ? 'Current' : 'Switch'}
+                    </Button>
                     <button
                       type="button"
                       title={canRemoveRepositories ? `Remove ${key}` : 'Keep at least one repository connected'}

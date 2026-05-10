@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useControllers, useStore } from '../stores/StoreProvider.jsx';
 import AppShellView from '../views/AppShellView.jsx';
@@ -11,6 +12,12 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
   const store = useStore();
   const { auth, repository } = useControllers();
   const canSync = Boolean(store.repoKeyString) && !store.isLoading;
+
+  useEffect(() => {
+    if (!store.flashMessage) return undefined;
+    const timer = window.setTimeout(() => store.clearFlashMessage(), 3000);
+    return () => window.clearTimeout(timer);
+  }, [store, store.flashMessage]);
 
   function requestRemoveRepository(repoKey) {
     if (store.repositories.length <= 1) {
@@ -56,7 +63,6 @@ const ShellPresenter = observer(function ShellPresenter({ current, children }) {
       isLoading={store.isLoading}
       loadingPhase={store.loadingPhase}
       flashMessage={store.flashMessage}
-      onDismissFlashMessage={store.clearFlashMessage}
       confirmation={store.confirmation}
       onCancelConfirmation={store.closeConfirmation}
       onConfirmConfirmation={store.confirmCurrentAction}

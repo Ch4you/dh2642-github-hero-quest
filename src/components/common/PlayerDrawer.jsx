@@ -3,7 +3,6 @@ import { Badge } from '../ui/badge.jsx';
 import { Avatar, AvatarFallback } from '../ui/avatar.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card.jsx';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet.jsx';
-import InfoTip from '../../views/shared/InfoTip.jsx';
 
 const badgeDescriptions = {
   'Merge Hero': 'At least 5 merged pull requests in this repository.',
@@ -12,7 +11,6 @@ const badgeDescriptions = {
   'Quest Finisher': 'Earned XP from completed team goals.',
 };
 
-const totalBadgeTypes = Object.keys(badgeDescriptions).length;
 
 function badgeDescription(badge) {
   return badgeDescriptions[badge] ?? 'Repository achievement.';
