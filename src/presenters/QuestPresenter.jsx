@@ -164,8 +164,8 @@ const QuestPresenter = observer(function QuestPresenter() {
   }
 
   async function persistCurrentForm() {
-    await quest.saveRequest(buildPayload());
     setFormOpen(false);
+    await quest.saveRequest(buildPayload());
   }
 
   async function saveRequestAndClose() {

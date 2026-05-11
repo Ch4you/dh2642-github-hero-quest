@@ -1,8 +1,9 @@
+import { Copy } from 'lucide-react';
 import { Button } from '../../components/ui/button.jsx';
 import { cn } from '../../components/ui/utils.js';
 import { formatDateTime } from '../shared/formatters.js';
 
-export default function TeammatesTableView({ teammates, loading = false, error = '', repoLabel, onSelectPlayer }) {
+export default function TeammatesTableView({ teammates, loading = false, error = '', repoLabel, onSelectPlayer, onCopyInvite }) {
   if (loading && !teammates.length) {
     return <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">Loading repository contributors...</div>;
   }
@@ -37,9 +38,13 @@ export default function TeammatesTableView({ teammates, loading = false, error =
               <td className="px-4 py-3 text-slate-600">{row.contributions ?? 0}</td>
               <td className="px-4 py-3 text-slate-600">{row.synced ? formatDateTime(row.updatedAtMs || row.allTimeSyncedAtMs) : 'Not synced yet'}</td>
               <td className="px-4 py-3 text-right">
-                {row.synced && (
+                {row.synced ? (
                   <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => onSelectPlayer?.(row.player)}>
                     View
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => onCopyInvite?.(row.username)}>
+                    <Copy className="h-3.5 w-3.5" /> Invite
                   </Button>
                 )}
               </td>
