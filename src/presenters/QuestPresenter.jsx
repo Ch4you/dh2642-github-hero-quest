@@ -195,6 +195,19 @@ const QuestPresenter = observer(function QuestPresenter() {
     setFormOpen(false);
   }
 
+  function requestCompleteRequest(requestId) {
+    const request = requestRows.find((item) => item.id === requestId);
+    if (!request) return;
+    store.requestConfirmation({
+      title: `Complete goal "${request.title}"?`,
+      message: 'This will mark the goal as completed and distribute rewards to contributors.',
+      confirmLabel: 'Complete goal',
+      onConfirm: () => {
+        quest.completeRequest(requestId);
+      },
+    });
+  }
+
   function requestDeleteRequest(requestId) {
     const request = store.requests.find((item) => item.id === requestId);
     if (!request) return;
@@ -233,6 +246,7 @@ const QuestPresenter = observer(function QuestPresenter() {
       onDeleteRequest={requestDeleteRequest}
       onSaveRequest={saveRequestAndClose}
       onSaveDraft={saveDraftAndClose}
+      onCompleteRequest={requestCompleteRequest}
     />
   );
 });

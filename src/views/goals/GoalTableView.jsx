@@ -5,7 +5,7 @@ import { cn } from '../../components/ui/utils.js';
 import { formatDate } from '../shared/formatters.js';
 import { isEditableStatus, statusLabel, statusTone } from '../shared/goalStatus.js';
 
-export default function GoalTableView({ requests = [], onViewRequest, onEditRequest, onDeleteRequest }) {
+export default function GoalTableView({ requests = [], onViewRequest, onEditRequest, onDeleteRequest, onCompleteRequest }) {
   return (
     <div className="max-h-[calc(100vh-440px)] overflow-auto rounded-3xl border border-slate-200">
       <table className="min-w-[920px] w-full divide-y divide-slate-200 text-sm">
@@ -40,7 +40,16 @@ export default function GoalTableView({ requests = [], onViewRequest, onEditRequ
                 <td className="px-4 py-3"><Badge className={cn('rounded-full', statusTone(goal.status))}>{statusLabel(goal.status)}</Badge></td>
                 <td className="px-4 py-3 text-slate-600">{goal.metricLabel}</td>
                 <td className="px-4 py-3 text-slate-600">{goal.targetValue}</td>
-                <td className="px-4 py-3 text-slate-600">{goal.progress?.current ?? 0}/{goal.progress?.goal ?? 1}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <span>{goal.progress?.current ?? 0}/{goal.progress?.goal ?? 1}</span>
+                    {goal.status === 'active' && (goal.progress?.current ?? 0) >= (goal.progress?.goal ?? 1) && (
+                      <Button type="button" size="sm" className="h-7 rounded-xl bg-emerald-600 px-2 text-xs text-white hover:bg-emerald-700" onClick={() => onCompleteRequest?.(goal.id)}>
+                        Complete
+                      </Button>
+                    )}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-slate-600">{formatDate(goal.startDate)} – {formatDate(goal.endDate)}</td>
                 <td className="px-4 py-3 text-slate-600">+{goal.rewardXp ?? 0}</td>
                 <td className="px-4 py-3 text-right">
