@@ -103,7 +103,8 @@ const QuestPresenter = observer(function QuestPresenter() {
     const pct = Math.min(100, Math.max(0, Math.round((existingValue / target) * 100)));
     const today = todayDateString();
     let status;
-    if (today < form.startDate) status = 'scheduled';
+    if (!form.startDate || !form.endDate) status = '';
+    else if (today < form.startDate) status = 'scheduled';
     else if (today <= form.endDate) status = 'active';
     else status = pct >= 100 ? 'completed' : 'expired';
     return {
