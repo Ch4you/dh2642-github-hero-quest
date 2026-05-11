@@ -133,6 +133,15 @@ export default function AppShellView({
                     <><RefreshCw className="mr-2 h-4 w-4" /> Sync</>
                   )}
                 </Button>
+                <a
+                  href="user-guide.html"
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Open user guide"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                >
+                  <HelpCircle className="h-4 w-4" /> Help
+                </a>
                 <button
                   type="button"
                   ref={profileButtonRef}
@@ -204,7 +213,7 @@ export default function AppShellView({
         </main>
       </div>
 
-      <nav className="fixed bottom-4 left-4 right-4 z-30 grid grid-cols-5 gap-1 rounded-3xl border border-slate-200 bg-white p-2 shadow-lg lg:hidden">
+      <nav className="fixed bottom-4 left-4 right-4 z-30 grid grid-cols-6 gap-1 rounded-3xl border border-slate-200 bg-white p-2 shadow-lg lg:hidden">
         {nav.map((item) => (
           <button
             key={item.key}
@@ -216,6 +225,15 @@ export default function AppShellView({
             {item.key === 'settings' ? 'Workspace' : item.label}
           </button>
         ))}
+        <a
+          href="user-guide.html"
+          target="_blank"
+          rel="noreferrer"
+          className="flex flex-col items-center rounded-2xl px-2 py-2 text-xs text-slate-600 hover:bg-slate-100 transition"
+        >
+          <HelpCircle className="mb-1 h-4 w-4" />
+          Help
+        </a>
       </nav>
     </div>
   );

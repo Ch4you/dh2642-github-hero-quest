@@ -91,16 +91,16 @@ export class RequestModel {
   status(value = 0, now = new Date()) {
     if (this.archived) return 'archived';
     if (this.manuallyCompleted) return 'completed';
-    const progress = this.progress(value);
-    if (progress.percentage >= 100) return 'completed';
 
     const today = todayDateString(now);
     const start = compareDateString(this.startDate, today);
     const end = compareDateString(this.endDate, today);
 
     if (today < start) return 'scheduled';
-    if (today > end) return 'expired';
-    return 'active';
+    if (today <= end) return 'active';
+
+    const progress = this.progress(value);
+    return progress.percentage >= 100 ? 'completed' : 'expired';
   }
 
   completedBonusForContribution(teamValue = 0, userContribution = 0) {
