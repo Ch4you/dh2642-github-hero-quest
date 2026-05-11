@@ -200,6 +200,7 @@ export function normalizeRequestList(requests = []) {
       rewardXp: Number(request?.rewardXp ?? 50),
       repoKey: String(request?.repoKey || '').trim(),
       archived: Boolean(request?.archived),
+      manuallyCompleted: Boolean(request?.manuallyCompleted),
     }))
     .filter((request) => request.id && request.title);
 }
