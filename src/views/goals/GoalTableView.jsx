@@ -7,7 +7,7 @@ import { isEditableStatus, statusLabel, statusTone } from '../shared/goalStatus.
 
 export default function GoalTableView({ requests = [], onViewRequest, onEditRequest, onDeleteRequest }) {
   return (
-    <div className="max-h-[520px] overflow-auto rounded-3xl border border-slate-200">
+    <div className="max-h-[410px] overflow-auto rounded-3xl border border-slate-200">
       <table className="min-w-[920px] w-full divide-y divide-slate-200 text-sm">
         <thead className="sticky top-0 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
           <tr>
