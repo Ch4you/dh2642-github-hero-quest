@@ -161,6 +161,9 @@ const QuestPresenter = observer(function QuestPresenter() {
     setForm(formFromRequest(request, store.repoKeyString));
     setDetailGoalId('');
     setFormOpen(true);
+    if (request.status === 'active') {
+      void quest.refreshRequestMetrics({ force: true });
+    }
   }
 
   async function persistCurrentForm() {
