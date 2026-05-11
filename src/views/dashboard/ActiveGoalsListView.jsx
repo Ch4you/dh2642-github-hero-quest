@@ -26,7 +26,7 @@ export default function ActiveGoalsListView({ goals, onComplete }) {
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="text-sm text-slate-500">{formatDate(goal.startDate)} – {formatDate(goal.endDate)}</div>
-              {goal.status === 'active' && onComplete && (
+              {goal.status === 'active' && onComplete && (goal.progress?.percentage ?? 0) >= 100 && (
                 <button
                   onClick={() => onComplete(goal.id)}
                   className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-200 transition-colors"
