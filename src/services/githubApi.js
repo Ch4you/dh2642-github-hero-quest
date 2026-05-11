@@ -216,7 +216,7 @@ export async function getMergedPullRequestDetails(owner, repo, { limit = 10 } = 
   const url = `https://api.github.com/search/issues?q=${encodeURIComponent(queryText)}&sort=updated&order=desc&per_page=${perPage}`;
   const json = await fetchJsonOrThrow(url);
 
-  return (Array.isArray(json?.items) ? json.items : []).map((item, index) => ({
+  const items = (Array.isArray(json?.items) ? json.items : []).map((item, index) => ({
     id: String(item.id ?? `${cleanOwner}/${cleanRepo}/${item.number ?? index}`),
     index: index + 1,
     number: Number(item.number ?? 0),
@@ -226,6 +226,11 @@ export async function getMergedPullRequestDetails(owner, repo, { limit = 10 } = 
     url: item.html_url || '',
     description: `#${item.number ?? ''} ${item.title ?? 'Merged pull request'}`.trim(),
   }));
+
+  return {
+    items,
+    totalCount: Number(json?.total_count ?? items.length),
+  };
 }
 
 export async function getRepoStats(owner, repo, username, { since = '', until = '' } = {}) {

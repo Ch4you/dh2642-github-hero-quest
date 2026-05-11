@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flame, GitPullRequest, Star, Target, Users } from 'lucide-react';
+import { Flame, GitPullRequest, Plus, Star, Target, Users } from 'lucide-react';
 import MetricCard from '../components/common/MetricCard.jsx';
 import { Badge } from '../components/ui/badge.jsx';
 import { Button } from '../components/ui/button.jsx';
@@ -16,6 +16,7 @@ import XpSourcesView from './dashboard/XpSourcesView.jsx';
 import TeammatesTableView from './dashboard/TeammatesTableView.jsx';
 import ActiveGoalsListView from './dashboard/ActiveGoalsListView.jsx';
 import MergedPullRequestTableView from './dashboard/MergedPullRequestTableView.jsx';
+import GoalFormModalView from './goals/GoalFormModalView.jsx';
 
 export default function QuestDashboardView({
   hero,
@@ -36,6 +37,17 @@ export default function QuestDashboardView({
   onModalOpen,
   onCopyInvite,
   onCompleteGoal,
+  goalForm,
+  goalFormOpen = false,
+  goalFormValid = false,
+  goalPreview,
+  goalMetricTypes = [],
+  onAddGoal,
+  onGoalFieldChange,
+  onClearGoalForm,
+  onCloseGoalForm,
+  onSaveGoal,
+  onSaveGoalDraft,
 }) {
   const [summaryModal, setSummaryModal] = useState(null);
   const hasRepository = Boolean(repo?.owner && repo?.name);
@@ -81,6 +93,9 @@ export default function QuestDashboardView({
             <GoalStatusInfoView />
             <Button onClick={() => openModal('goals')} variant="outline" className="rounded-2xl border-slate-200">
               Active goals
+            </Button>
+            <Button type="button" className="rounded-2xl bg-slate-900 text-white hover:bg-slate-800" onClick={onAddGoal}>
+              <Plus className="h-4 w-4" /> Add goal
             </Button>
           </div>
         </CardHeader>
@@ -130,6 +145,19 @@ export default function QuestDashboardView({
         {summaryModal === 'goals' && <ActiveGoalsListView goals={activeGoals} onComplete={onCompleteGoal} />}
         {summaryModal === 'merged' && <MergedPullRequestTableView items={mergedPullRequests} />}
       </DetailModalView>
+
+      <GoalFormModalView
+        open={goalFormOpen}
+        form={goalForm}
+        preview={goalPreview}
+        metricTypes={goalMetricTypes}
+        formValid={goalFormValid}
+        onFieldChange={onGoalFieldChange}
+        onSaveRequest={onSaveGoal}
+        onSaveDraft={onSaveGoalDraft}
+        onClearForm={onClearGoalForm}
+        onClose={onCloseGoalForm}
+      />
     </div>
   );
 }

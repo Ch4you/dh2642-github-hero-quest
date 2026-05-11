@@ -278,17 +278,21 @@ export function normalizePullRequestDetails(items = []) {
   }));
 }
 
-export function toMergedPullRequestDetailsDoc({ repoKey, items, syncedAtMs } = {}) {
+export function toMergedPullRequestDetailsDoc({ repoKey, items, totalCount, syncedAtMs } = {}) {
+  const cleanItems = normalizePullRequestDetails(items);
   return {
     repoKey: normalizeRepoKey(repoKey),
-    items: normalizePullRequestDetails(items),
+    items: cleanItems,
+    totalCount: Number(totalCount ?? cleanItems.length),
     syncedAtMs: Number(syncedAtMs ?? Date.now()),
   };
 }
 
 export function fromMergedPullRequestDetailsDoc(data = {}) {
+  const items = normalizePullRequestDetails(data.items);
   return {
-    items: normalizePullRequestDetails(data.items),
+    items,
+    totalCount: Number(data.totalCount ?? items.length),
     syncedAtMs: Number(data.syncedAtMs ?? 0),
   };
 }
