@@ -696,57 +696,87 @@ export class RepositoryController {
     }
   }
 
-  async loadMergedPullRequestDetails({ force = false } = {}) {
+  applyMergedPullRequestDetails({ items = [], totalCount, syncedAtMs } = {}) {
+    const safeItems = Array.isArray(items) ? items : [];
+    const safeTotalCount = Number(totalCount ?? safeItems.length);
+    this.store.setMergedPullRequests(safeItems, syncedAtMs);
+    this.store.setRepoStats({
+      ...this.store.repoStats,
+      mergedPRs: Number.isFinite(safeTotalCount) ? safeTotalCount : safeItems.length,
+    });
+  }
+
+  async loadCachedMergedPullRequestDetails(repoKey = this.store.repoKeyString) {
+    if (!repoKey || !isFirebaseConfigured()) return null;
+
+    try {
+      const cached = await getMergedPullRequestDetailsForRepo(repoKey);
+      if ((cached?.items?.length || Number(cached?.totalCount) > 0) && this.store.repoKeyString === repoKey) {
+        this.applyMergedPullRequestDetails(cached);
+      }
+      return cached;
+    } catch (error) {
+      this.store.addNotification(
+        `Saved merged PR details could not load: ${error?.message ?? 'unknown'}`,
+        'Merged PR details warning',
+        'error',
+      );
+      return null;
+    }
+  }
+
+  async loadMergedPullRequestDetails({ force = false, source = 'manual', onlyIfCached = false } = {}) {
     if (!this.store.repo?.owner || !this.store.repo?.name) return false;
 
     if (!force && isFresh(this.store.mergedPullRequestsSyncedAtMs)) {
-      await this.showSilentSpinner('Loading saved merged pull requests...');
+      if (source === 'manual') await this.showSilentSpinner('Loading saved merged pull requests...');
       return true;
     }
 
-    if (!force && isFirebaseConfigured()) {
-      try {
-        const cached = await getMergedPullRequestDetailsForRepo(this.store.repoKeyString);
-        if (cached?.items?.length) {
-          this.store.setMergedPullRequests(cached.items, cached.syncedAtMs);
-          if (isFresh(cached.syncedAtMs)) {
-            await this.showSilentSpinner('Loading saved merged pull requests...');
-            return true;
-          }
-        }
-      } catch (error) {
-        this.store.addNotification(
-          `Saved merged PR details could not load: ${error?.message ?? 'unknown'}`,
-          'Merged PR details warning',
-          'error',
-        );
-      }
+    const syncRepoKey = this.store.repoKeyString;
+    const cached = !force ? await this.loadCachedMergedPullRequestDetails(syncRepoKey) : null;
+    const hasCachedDetails = Boolean(cached?.items?.length || Number(cached?.totalCount) > 0);
+
+    if (!force && hasCachedDetails && (isFresh(cached.syncedAtMs) || onlyIfCached)) {
+      if (source === 'manual') await this.showSilentSpinner('Loading saved merged pull requests...');
+      return true;
     }
 
-    if (!this.canStartGitHubSync({ force, source: 'manual' })) return false;
+    if (onlyIfCached) return hasCachedDetails;
 
-    const syncRepoKey = this.store.repoKeyString;
-    this.store.setLoading({ isLoading: true, phase: 'Loading merged pull requests...' });
+    if (!this.canStartGitHubSync({ force, source })) return hasCachedDetails;
+
+    if (source === 'manual') {
+      this.store.setLoading({ isLoading: true, phase: 'Loading merged pull requests...' });
+    }
 
     try {
-      const items = await getMergedPullRequestDetails(this.store.repo.owner, this.store.repo.name, { limit: 10 });
+      const result = await getMergedPullRequestDetails(this.store.repo.owner, this.store.repo.name, { limit: 10 });
       if (this.store.repoKeyString !== syncRepoKey) return false;
+      const items = Array.isArray(result) ? result : result.items;
+      const totalCount = Array.isArray(result) ? result.length : result.totalCount;
       const syncedAtMs = Date.now();
-      this.store.setMergedPullRequests(items, syncedAtMs);
+      this.applyMergedPullRequestDetails({ items, totalCount, syncedAtMs });
 
       if (isFirebaseConfigured()) {
         await saveMergedPullRequestDetailsForRepo({
           repoKey: this.store.repoKeyString,
           items,
+          totalCount,
           syncedAtMs,
         });
       }
       return true;
     } catch (error) {
-      this.store.addNotification(explainGitHubError(error), 'Merged PR details failed', 'error');
-      return false;
+      this.applyGitHubRateLimitBackoff(error);
+      if (source === 'manual' || !hasCachedDetails) {
+        this.store.addNotification(explainGitHubError(error), 'Merged PR details failed', 'error');
+      }
+      return hasCachedDetails;
     } finally {
-      this.store.setLoading({ isLoading: false, phase: '' });
+      if (source === 'manual') {
+        this.store.setLoading({ isLoading: false, phase: '' });
+      }
     }
   }
 

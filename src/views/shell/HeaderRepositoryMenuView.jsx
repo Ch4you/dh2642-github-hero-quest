@@ -20,12 +20,13 @@ export default function HeaderRepositoryMenuView({ repoLabel, repositories = [],
         </button>
         <button
           type="button"
-          className="shrink-0 rounded-2xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+          className="displayVer shrink-0 rounded-2xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
           aria-label="Copy invite link"
           title="Copy invite link"
           onClick={onCopyInvite}
         >
-          <Copy className="h-4 w-4" />
+          <Copy className="h-4 w-4 " />
+          <div className="pdl" >Invite</div>
         </button>
       </div>
 

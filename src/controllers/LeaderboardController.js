@@ -1,15 +1,5 @@
 import { isFirebaseConfigured, subscribeLeaderboard } from '../services/firebaseService.js';
 
-function timestampToMs(value) {
-  if (!value) return 0;
-  if (typeof value.toMillis === 'function') return value.toMillis();
-  if (typeof value.toDate === 'function') return value.toDate().getTime();
-  if (typeof value === 'number') return value;
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
-
-
 const BADGE_RULES = [
   { label: 'Merge Hero', test: (row) => Number(row.mergedPRs ?? 0) >= 5 },
   { label: 'Review Guardian', test: (row) => Number(row.reviews ?? 0) >= 5 },
@@ -53,8 +43,8 @@ function mapFirebaseRecordToPlayer(row) {
     weeklyRangeEnd: String(row.weeklyRangeEnd ?? ''),
     weeklySyncedAtMs: Number(row.weeklySyncedAtMs ?? 0),
     allTimeSyncedAtMs: Number(row.allTimeSyncedAtMs ?? 0),
-    updatedAtMs: timestampToMs(row.updatedAt),
-    createdAtMs: Number(row.createdAtMs ?? 0) || timestampToMs(row.createdAt) || timestampToMs(row.updatedAt),
+    updatedAtMs: Number(row.updatedAtMs ?? 0),
+    createdAtMs: Number(row.createdAtMs ?? 0),
     requestBonusXp: Number(row.requestBonusXp ?? 0),
     questBonusXp: Number(row.requestBonusXp ?? 0),
     streak: Number(row.streak ?? 0),

@@ -1,4 +1,4 @@
-import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2, CheckCircle2  } from 'lucide-react';
 import { Badge } from '../../components/ui/badge.jsx';
 import { Button } from '../../components/ui/button.jsx';
 import { cn } from '../../components/ui/utils.js';
@@ -7,7 +7,7 @@ import { isEditableStatus, statusLabel, statusTone } from '../shared/goalStatus.
 
 export default function GoalTableView({ requests = [], onViewRequest, onEditRequest, onDeleteRequest, onCompleteRequest }) {
   return (
-    <div className="max-h-[calc(100vh-440px)] overflow-auto rounded-3xl border border-slate-200">
+    <div className="max-h-[calc(100vh-500px)] overflow-auto rounded-3xl border border-slate-200">
       <table className="min-w-[920px] w-full divide-y divide-slate-200 text-sm">
         <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
           <tr>
@@ -30,6 +30,9 @@ export default function GoalTableView({ requests = [], onViewRequest, onEditRequ
           )}
           {requests.map((goal, index) => {
             const canEdit = isEditableStatus(goal.status);
+            const canComplete =
+              goal.status === 'active' &&
+              (goal.progress?.current ?? 0) >= (goal.progress?.goal ?? 1);
             return (
               <tr key={goal.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3 text-slate-500">{index + 1}</td>
@@ -43,11 +46,7 @@ export default function GoalTableView({ requests = [], onViewRequest, onEditRequ
                 <td className="px-4 py-3 text-slate-600">
                   <div className="flex items-center gap-2">
                     <span>{goal.progress?.current ?? 0}/{goal.progress?.goal ?? 1}</span>
-                    {goal.status === 'active' && (goal.progress?.current ?? 0) >= (goal.progress?.goal ?? 1) && (
-                      <Button type="button" size="sm" className="h-7 rounded-xl bg-emerald-600 px-2 text-xs text-white hover:bg-emerald-700" onClick={() => onCompleteRequest?.(goal.id)}>
-                        Complete
-                      </Button>
-                    )}
+                   
                   </div>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{formatDate(goal.startDate)} – {formatDate(goal.endDate)}</td>
@@ -57,12 +56,34 @@ export default function GoalTableView({ requests = [], onViewRequest, onEditRequ
                     <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200" onClick={() => onViewRequest?.(goal.id)} title="View goal">
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button type="button" variant="outline" size="icon" disabled={!canEdit} className="h-9 w-9 rounded-xl border-slate-200" onClick={() => canEdit && onEditRequest?.(goal.id)} title={canEdit ? 'Edit goal' : 'Only scheduled and active goals can be edited'}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 rounded-xl border-slate-200"
+                        onClick={() => onEditRequest?.(goal.id)}
+                        title="Edit goal"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button type="button" variant="outline" size="icon" className="h-9 w-9 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50" onClick={() => onDeleteRequest?.(goal.id)} title="Delete goal">
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    {goal.status === 'active' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        disabled={!canComplete}
+                        className="h-9 w-9 rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white"
+                        onClick={() => canComplete && onCompleteRequest?.(goal.id)}
+                        title={canComplete ? 'Complete goal' : 'Goal can be completed after it reaches the target'}
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>

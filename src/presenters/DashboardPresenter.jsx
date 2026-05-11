@@ -1,9 +1,43 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useControllers, useStore } from '../stores/StoreProvider.jsx';
 import QuestDashboardView from '../views/QuestDashboardView.jsx';
 import { getXpBreakdown } from '../models/scoreRules.js';
-import { getMetricDefinition, getMetricLabel } from '../models/QuestModel.js';
+import { REQUEST_METRIC_TYPES, addDaysDateString, getMetricDefinition, getMetricLabel, todayDateString } from '../models/QuestModel.js';
+
+
+function makeEmptyForm(repoKey) {
+  return {
+    id: '',
+    title: '',
+    description: '',
+    metricType: '',
+    targetValue: '',
+    startDate: todayDateString(),
+    endDate: addDaysDateString(7),
+    rewardXp: '50',
+    repoKey,
+  };
+}
+
+function formFromRequest(request, repoKey) {
+  if (!request) return makeEmptyForm(repoKey);
+  return {
+    id: request.id || '',
+    title: request.title || '',
+    description: request.description ?? '',
+    metricType: request.metricType ?? '',
+    targetValue: String(request.targetValue ?? ''),
+    startDate: request.startDate || todayDateString(),
+    endDate: request.endDate || addDaysDateString(7),
+    rewardXp: String(request.rewardXp ?? 50),
+    repoKey,
+  };
+}
+
+function isEditableStatus(status) {
+  return status === 'scheduled' || status === 'active';
+}
 
 function latestActiveTime(goal) {
   const start = Date.parse(goal?.startDate || '');
@@ -45,6 +79,8 @@ function buildGoalRisk(goal) {
 const DashboardPresenter = observer(function DashboardPresenter() {
   const store = useStore();
   const { repository, quest } = useControllers();
+  const [form, setForm] = useState(() => formFromRequest(store.requestDraft, store.repoKeyString));
+  const [formOpen, setFormOpen] = useState(false);
 
   const allGoalCards = useMemo(
     () =>
@@ -67,6 +103,36 @@ const DashboardPresenter = observer(function DashboardPresenter() {
   const goalPreviewCards = useMemo(
     () => activeGoalCards.slice(0, 1),
     [activeGoalCards],
+  );
+
+
+  const goalPreview = useMemo(() => {
+    const target = Math.max(1, Number(form.targetValue || 1));
+    const existingValue = form.id ? Number(store.requestMetricsById[form.id] ?? 0) : 0;
+    const pct = Math.min(100, Math.max(0, Math.round((existingValue / target) * 100)));
+    const today = todayDateString();
+    let status;
+    if (!form.startDate || !form.endDate) status = '';
+    else if (today < form.startDate) status = 'scheduled';
+    else if (today <= form.endDate) status = 'active';
+    else status = pct >= 100 ? 'completed' : 'expired';
+    return {
+      goal: target,
+      current: existingValue,
+      pct,
+      status,
+      metricLabel: form.metricType ? getMetricLabel(form.metricType) : 'Choose a metric',
+    };
+  }, [form, store.requestMetricsById]);
+
+  const formValid = Boolean(
+    form.title?.trim() &&
+      form.metricType &&
+      Number(form.targetValue) > 0 &&
+      form.startDate &&
+      form.endDate &&
+      form.endDate >= form.startDate &&
+      Number(form.rewardXp) >= 0,
   );
 
   const xpBars = useMemo(() => {
@@ -109,6 +175,7 @@ const DashboardPresenter = observer(function DashboardPresenter() {
   useEffect(() => {
     if (repoLabel) {
       void repository.loadRepositoryContributors({ source: 'background' });
+      void repository.loadMergedPullRequestDetails({ source: 'background', onlyIfCached: true });
     }
   }, [repoLabel, repository]);
 
@@ -116,6 +183,62 @@ const DashboardPresenter = observer(function DashboardPresenter() {
     if (!repoLabel) return;
     if (type === 'merged') void repository.loadMergedPullRequestDetails();
     if (type === 'teammates') void repository.loadRepositoryContributors({ source: 'manual' });
+  }
+
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function buildPayload({ draft = false } = {}) {
+    return {
+      id: draft ? '' : form.id || undefined,
+      title: form.title,
+      description: form.description,
+      metricType: form.metricType,
+      targetValue: Number(form.targetValue),
+      startDate: form.startDate,
+      endDate: form.endDate,
+      rewardXp: Number(form.rewardXp),
+    };
+  }
+
+  function startNewGoal() {
+    setForm(formFromRequest(store.requestDraft, store.repoKeyString));
+    setFormOpen(true);
+  }
+
+  function clearForm() {
+    setForm(makeEmptyForm(store.repoKeyString));
+  }
+
+  async function persistCurrentForm() {
+    setFormOpen(false);
+    await quest.saveRequest(buildPayload());
+  }
+
+  async function saveGoalAndClose() {
+    if (!formValid) return;
+    const editing = Boolean(form.id);
+    if (!isEditableStatus(goalPreview.status)) {
+      store.requestConfirmation({
+        title: `Save as ${goalPreview.status} goal?`,
+        message: editing
+          ? `This update changes the goal status to ${goalPreview.status}. After saving it, the goal can still be deleted but can no longer be edited.`
+          : `This goal will be created with status "${goalPreview.status}". It can still be deleted but cannot be edited after saving.`,
+        confirmLabel: editing ? 'Save goal' : 'Create goal',
+        onConfirm: () => {
+          void persistCurrentForm();
+        },
+      });
+      return;
+    }
+    await persistCurrentForm();
+  }
+
+  function saveDraftAndClose() {
+    quest.saveDraft(buildPayload({ draft: true }));
+    setFormOpen(false);
   }
 
   function handleCompleteGoal(goalId) {
@@ -153,6 +276,17 @@ const DashboardPresenter = observer(function DashboardPresenter() {
       onModalOpen={handleModalOpen}
       onCopyInvite={copyInvite}
       onCompleteGoal={handleCompleteGoal}
+      goalForm={form}
+      goalFormOpen={formOpen}
+      goalFormValid={formValid}
+      goalPreview={goalPreview}
+      goalMetricTypes={REQUEST_METRIC_TYPES}
+      onAddGoal={startNewGoal}
+      onGoalFieldChange={updateField}
+      onClearGoalForm={clearForm}
+      onCloseGoalForm={() => setFormOpen(false)}
+      onSaveGoal={saveGoalAndClose}
+      onSaveGoalDraft={saveDraftAndClose}
     />
   );
 });

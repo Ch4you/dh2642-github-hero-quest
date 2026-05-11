@@ -290,14 +290,14 @@ export async function getRequestMetricsForRepo({ repoKey, username }) {
   return fromRequestMetricsDoc(snap.data(), username);
 }
 
-export async function saveMergedPullRequestDetailsForRepo({ repoKey, items, syncedAtMs }) {
+export async function saveMergedPullRequestDetailsForRepo({ repoKey, items, totalCount, syncedAtMs }) {
   if (!repoKey) throw new Error('saveMergedPullRequestDetailsForRepo: repoKey is required');
   const db = getDb();
   const cleanRepoKey = normalizeRepoKey(repoKey);
   await setDoc(
     doc(db, MERGED_PR_DETAILS_COLLECTION, cleanRepoKey),
     {
-      ...toMergedPullRequestDetailsDoc({ repoKey, items, syncedAtMs }),
+      ...toMergedPullRequestDetailsDoc({ repoKey, items, totalCount, syncedAtMs }),
       updatedAt: serverTimestamp(),
     },
     { merge: true },
