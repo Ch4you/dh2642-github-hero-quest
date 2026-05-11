@@ -151,7 +151,18 @@ export function toUserProgressDoc(progress = {}, { hasExisting = true } = {}) {
   return payload;
 }
 
+function firestoreTimestampToMs(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.toDate === 'function') return value.toDate().getTime();
+  if (typeof value === 'number') return value;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 export function fromUserProgressDoc(data = {}) {
+  const updatedAtMs = firestoreTimestampToMs(data.updatedAt);
+  const createdAtMs = Number(data.createdAtMs ?? 0) || firestoreTimestampToMs(data.createdAt) || updatedAtMs;
   return {
     id: String(data.id || ''),
     username: String(data.username || '').trim(),
@@ -173,9 +184,8 @@ export function fromUserProgressDoc(data = {}) {
     weeklyRangeStart: String(data.weeklyRangeStart ?? ''),
     weeklyRangeEnd: String(data.weeklyRangeEnd ?? ''),
     weeklySyncedAtMs: Number(data.weeklySyncedAtMs ?? 0),
-    createdAt: data.createdAt,
-    updatedAt: data.updatedAt,
-    createdAtMs: Number(data.createdAtMs ?? 0),
+    updatedAtMs,
+    createdAtMs,
   };
 }
 

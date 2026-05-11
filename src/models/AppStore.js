@@ -113,6 +113,8 @@ export class AppStore {
 
   setLeaderboardRows = (rows) => this.leaderboardStore.setLeaderboardRows(rows);
   setLeaderboardFilter = (filter) => this.leaderboardStore.setLeaderboardFilter(filter);
+  get leaderboardSearchQuery() { return this.leaderboardStore.searchQuery; }
+  setLeaderboardSearchQuery = (value) => this.leaderboardStore.setSearchQuery(value);
   setLeaderboardUnsubscribe = (unsubscribe) => this.leaderboardStore.setLeaderboardUnsubscribe(unsubscribe);
   stopLeaderboardSubscription = () => this.leaderboardStore.stopLeaderboardSubscription();
 

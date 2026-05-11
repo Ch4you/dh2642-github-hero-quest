@@ -67,13 +67,13 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
       ...row,
       rankXp: filter === 'All time' ? Number(row.xp ?? 0) : getFreshWeeklyXp(row),
     }));
-    const query = store.leaderboardStore.searchQuery?.trim?.().toLowerCase?.() || '';
+    const query = store.leaderboardSearchQuery?.trim().toLowerCase() || '';
     if (!query) return rowsWithDisplayXp;
     return rowsWithDisplayXp.filter((row) => {
       const haystack = [row.name, row.username, ...(row.badges ?? [])].join(' ').toLowerCase();
       return haystack.includes(query);
     });
-  }, [rankedRows, store.leaderboardStore.searchQuery, filter]);
+  }, [rankedRows, store.leaderboardSearchQuery, filter]);
 
   const timeRangeLabel = filter === 'All time'
     ? getAllTimeRangeLabel(store.repo?.createdAt, visibleRows)
@@ -90,7 +90,7 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
   }
 
   function handleSearchQueryChange(value) {
-    store.leaderboardStore.setSearchQuery(value);
+    store.setLeaderboardSearchQuery(value);
   }
 
   return (
@@ -99,7 +99,7 @@ const LeaderboardPresenter = observer(function LeaderboardPresenter() {
       filter={filter}
       onFilterChange={handleFilterChange}
       timeRangeLabel={timeRangeLabel}
-      searchQuery={store.leaderboardStore.searchQuery}
+      searchQuery={store.leaderboardSearchQuery}
       onSearchQueryChange={handleSearchQueryChange}
       onSelectPlayer={store.selectPlayer}
       scoreRules={store.scoreRules}
