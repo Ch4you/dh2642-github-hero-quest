@@ -2,7 +2,6 @@ import { RotateCcw, X } from 'lucide-react';
 import { Badge } from '../../components/ui/badge.jsx';
 import { Button } from '../../components/ui/button.jsx';
 import { Input } from '../../components/ui/input.jsx';
-import { Progress } from '../../components/ui/progress.jsx';
 import { cn } from '../../components/ui/utils.js';
 import InfoTip from '../shared/InfoTip.jsx';
 import { statusLabel, statusTone } from '../shared/goalStatus.js';
@@ -132,13 +131,6 @@ export default function GoalFormModalView({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-slate-600">{preview?.metricLabel}</span>
-                  <span className="font-medium text-slate-900">{preview?.current ?? 0} / {preview?.goal ?? 1}</span>
-                </div>
-                <Progress value={preview?.pct ?? 0} className="h-3 rounded-full" />
-              </div>
             </div>
           </div>
 
