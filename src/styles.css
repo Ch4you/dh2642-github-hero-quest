@@ -20,6 +20,20 @@ textarea {
   font: inherit;
 }
 
+button,
+a,
+select,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+label[for] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 .displayBox{
   display: flex;
 }

@@ -102,7 +102,11 @@ const QuestPresenter = observer(function QuestPresenter() {
     const existingValue = form.id ? Number(store.requestMetricsById[form.id] ?? 0) : 0;
     const pct = Math.min(100, Math.max(0, Math.round((existingValue / target) * 100)));
     const today = todayDateString();
-    const status = pct >= 100 ? 'completed' : today < form.startDate ? 'scheduled' : today > form.endDate ? 'expired' : 'active';
+    let status;
+    if (!form.startDate || !form.endDate) status = '';
+    else if (today < form.startDate) status = 'scheduled';
+    else if (today <= form.endDate) status = 'active';
+    else status = pct >= 100 ? 'completed' : 'expired';
     return {
       goal: target,
       current: existingValue,
@@ -157,21 +161,26 @@ const QuestPresenter = observer(function QuestPresenter() {
     setForm(formFromRequest(request, store.repoKeyString));
     setDetailGoalId('');
     setFormOpen(true);
+    if (request.status === 'active') {
+      void quest.refreshRequestMetrics({ force: true });
+    }
   }
 
   async function persistCurrentForm() {
-    await quest.saveRequest(buildPayload());
     setFormOpen(false);
+    await quest.saveRequest(buildPayload());
   }
 
   async function saveRequestAndClose() {
     if (!formValid) return;
     const editing = Boolean(form.id);
-    if (editing && !isEditableStatus(preview.status)) {
+    if (!isEditableStatus(preview.status)) {
       store.requestConfirmation({
         title: `Save as ${preview.status} goal?`,
-        message: `This update changes the goal status to ${preview.status}. After saving it, the goal can still be deleted but can no longer be edited.`,
-        confirmLabel: 'Save goal',
+        message: editing
+          ? `This update changes the goal status to ${preview.status}. After saving it, the goal can still be deleted but can no longer be edited.`
+          : `This goal will be created with status "${preview.status}". It can still be deleted but cannot be edited after saving.`,
+        confirmLabel: editing ? 'Save goal' : 'Create goal',
         onConfirm: () => {
           void persistCurrentForm();
         },
@@ -184,6 +193,19 @@ const QuestPresenter = observer(function QuestPresenter() {
   function saveDraftAndClose() {
     quest.saveDraft(buildPayload({ draft: true }));
     setFormOpen(false);
+  }
+
+  function requestCompleteRequest(requestId) {
+    const request = requestRows.find((item) => item.id === requestId);
+    if (!request) return;
+    store.requestConfirmation({
+      title: `Complete goal "${request.title}"?`,
+      message: 'This will mark the goal as completed and distribute rewards to contributors.',
+      confirmLabel: 'Complete goal',
+      onConfirm: () => {
+        quest.completeRequest(requestId);
+      },
+    });
   }
 
   function requestDeleteRequest(requestId) {
@@ -224,6 +246,7 @@ const QuestPresenter = observer(function QuestPresenter() {
       onDeleteRequest={requestDeleteRequest}
       onSaveRequest={saveRequestAndClose}
       onSaveDraft={saveDraftAndClose}
+      onCompleteRequest={requestCompleteRequest}
     />
   );
 });

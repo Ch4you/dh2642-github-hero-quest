@@ -4,7 +4,7 @@ import { cn } from '../../components/ui/utils.js';
 import { formatDate } from '../shared/formatters.js';
 import { statusLabel, statusTone } from '../shared/goalStatus.js';
 
-export default function ActiveGoalsListView({ goals }) {
+export default function ActiveGoalsListView({ goals, onComplete }) {
   const activeGoals = Array.isArray(goals) ? goals : [];
 
   if (!activeGoals.length) {
@@ -24,7 +24,17 @@ export default function ActiveGoalsListView({ goals }) {
               <h3 className="mt-3 text-lg font-semibold text-slate-900">{goal.title}</h3>
               {goal.description && <p className="mt-1 text-sm leading-6 text-slate-600">{goal.description}</p>}
             </div>
-            <div className="text-sm text-slate-500">{formatDate(goal.startDate)} – {formatDate(goal.endDate)}</div>
+            <div className="flex flex-col items-end gap-2">
+              <div className="text-sm text-slate-500">{formatDate(goal.startDate)} – {formatDate(goal.endDate)}</div>
+              {goal.status === 'active' && onComplete && (goal.progress?.percentage ?? 0) >= 100 && (
+                <button
+                  onClick={() => onComplete(goal.id)}
+                  className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-200 transition-colors"
+                >
+                  Complete
+                </button>
+              )}
+            </div>
           </div>
           <div className="mt-4">
             <Progress value={goal.progress?.percentage ?? 0} className="h-3 rounded-full" />

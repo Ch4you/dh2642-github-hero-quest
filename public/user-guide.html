@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Hero Quest – User Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      padding: 40px 20px 80px;
+    }
+
+    .page {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .cover {
+      background: #0f172a;
+      color: #fff;
+      border-radius: 24px;
+      padding: 48px 40px;
+      margin-bottom: 32px;
+    }
+
+    .cover-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 12px;
+    }
+
+    .cover h1 {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .cover p {
+      color: #94a3b8;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .print-btn {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 10px 22px;
+      background: #fff;
+      color: #0f172a;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+    }
+
+    .print-btn:hover { background: #e2e8f0; }
+
+    .section {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .section-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: #0f172a;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .section h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 16px;
+    }
+
+    .section p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #475569;
+      margin-bottom: 12px;
+    }
+
+    .steps {
+      list-style: none;
+      margin-top: 8px;
+    }
+
+    .steps li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #334155;
+      line-height: 1.6;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      background: #e2e8f0;
+      color: #475569;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .tip {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #166534;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    .tip strong { font-weight: 600; }
+
+    .tag {
+      display: inline-block;
+      background: #e2e8f0;
+      color: #475569;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-right: 4px;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .print-btn { display: none; }
+      .section { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="cover">
+      <div class="cover-label">User Guide</div>
+      <h1>GitHub Hero Quest</h1>
+      <p>Track your team's GitHub activity, create shared goals, and climb the leaderboard together.</p>
+      <button class="print-btn" onclick="window.print()">Save as PDF</button>
+    </div>
+
+    <div class="section">
+      <div class="section-number">1</div>
+      <h2>Sign in with GitHub</h2>
+      <p>GitHub Hero Quest uses GitHub OAuth for authentication. No password is stored — your GitHub account is used directly.</p>
+      <ol class="steps">
+        <li><span class="step-num">1</span>Open the app and click <strong>Sign in with GitHub</strong> on the welcome screen.</li>
+        <li><span class="step-num">2</span>A GitHub authorization popup will appear. Approve the request.</li>
+        <li><span class="step-num">3</span>You will be redirected back to the app and signed in automatically.</li>
+        <li><span class="step-num">4</span>Your GitHub username and avatar will appear in the top-right corner.</li>
+      </ol>
+      <div class="tip"><strong>Note:</strong> Email/password sign-in is not supported. GitHub OAuth is the only login method.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-number">2</div>
+      <h2>Connect a GitHub Repository</h2>
+      <p>After signing in, connect a public GitHub repository to start tracking activity.</p>
+      <ol class="steps">
+        <li><span class="step-num">1</span>Click <strong>Workspace</strong> in the left sidebar (or bottom nav on mobile).</li>
+        <li><span class="step-num">2</span>Enter the repository URL or <span class="tag">owner/repo</span> name in the input field.</li>
+        <li><span class="step-num">3</span>Click <strong>Connect</strong>. The app will validate and fetch initial data.</li>
+        <li><span class="step-num">4</span>Once connected, click <strong>Sync</strong> in the top header to load the latest GitHub activity.</li>
+        <li><span class="step-num">5</span>To switch repositories, click the repository name in the header and select from the list.</li>
+      </ol>
+      <div class="tip"><strong>Tip:</strong> Each repository has its own separate workspace — goals, XP rules, and rankings are all stored per repository.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-number">3</div>
+      <h2>Create and Manage Goals</h2>
+      <p>Goals (Quests) let your team set measurable targets for repository activity within a date range.</p>
+      <ol class="steps">
+        <li><span class="step-num">1</span>Click <strong>Manage goals</strong> in the left sidebar.</li>
+        <li><span class="step-num">2</span>Click <strong>Add</strong> to open the goal creation form.</li>
+        <li><span class="step-num">3</span>Fill in a title, choose a metric (Merged PRs, Commits, Open PRs, or Reviewed PRs), set a target value, and pick start and end dates.</li>
+        <li><span class="step-num">4</span>Optionally set a reward XP amount for completing the goal.</li>
+        <li><span class="step-num">5</span>Click <strong>Save</strong>. The goal will appear in the Active tab once its start date arrives.</li>
+        <li><span class="step-num">6</span>To mark a goal as done early, click the <strong>Complete</strong> button next to an active goal in the Dashboard.</li>
+        <li><span class="step-num">7</span>To delete a goal, open its detail view and click <strong>Delete</strong>.</li>
+      </ol>
+      <div class="tip"><strong>Tip:</strong> Goals are shared across the team. All members connected to the same repository will see the same goals and progress.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-number">4</div>
+      <h2>Dashboard and Leaderboard</h2>
+      <p>The Dashboard gives you a personal overview of your activity. The Leaderboard shows how the whole team compares.</p>
+      <ol class="steps">
+        <li><span class="step-num">1</span>Click <strong>Dashboard</strong> in the sidebar to see your XP, level, and active goals.</li>
+        <li><span class="step-num">2</span>The XP breakdown shows how your commits, PRs, and reviews contribute to your score.</li>
+        <li><span class="step-num">3</span>Click <strong>Active Goals</strong> to see all current team goals and their progress.</li>
+        <li><span class="step-num">4</span>Click <strong>Team ranking</strong> in the sidebar to open the Leaderboard.</li>
+        <li><span class="step-num">5</span>Use the <strong>Last 7 days</strong> / <strong>All time</strong> toggle to switch between weekly and overall rankings.</li>
+        <li><span class="step-num">6</span>Click <strong>Sync</strong> in the header at any time to refresh data from GitHub.</li>
+      </ol>
+      <div class="tip"><strong>Tip:</strong> Invite teammates by clicking the copy icon next to their name in the Teammates panel — they need to sign in and connect the same repository to appear on the leaderboard.</div>
+    </div>
+
+  </div>
+</body>
+</html>

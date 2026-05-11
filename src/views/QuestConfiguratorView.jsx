@@ -30,6 +30,7 @@ export default function QuestConfiguratorView({
   onDeleteRequest,
   onSaveRequest,
   onSaveDraft,
+  onCompleteRequest,
 }) {
   const currentStatusLabel = STATUS_OPTIONS.find((item) => item.key === statusFilter)?.label ?? 'Active';
 
@@ -59,6 +60,7 @@ export default function QuestConfiguratorView({
             onViewRequest={onViewRequest}
             onEditRequest={onEditRequest}
             onDeleteRequest={onDeleteRequest}
+            onCompleteRequest={onCompleteRequest}
           />
         </CardContent>
       </Card>

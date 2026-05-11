@@ -44,7 +44,7 @@ export default function TeammatesTableView({ teammates, loading = false, error =
                   </Button>
                 ) : (
                   <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => onCopyInvite?.(row.username)}>
-                    <Copy className="h-3.5 w-3.5" /> Copy invite
+                    <Copy className="h-3.5 w-3.5" /> Invite
                   </Button>
                 )}
               </td>

@@ -1,4 +1,4 @@
-import { RequestModel } from '../models/QuestModel.js';
+import { RequestModel, todayDateString } from '../models/QuestModel.js';
 import { getRequestMetricValues } from '../services/githubApi.js';
 import {
   getRequestMetricsForRepo,
@@ -105,7 +105,15 @@ export class QuestController {
 
     this.store.upsertRequest(nextRequest);
     await this.persistRequests();
-    await this.loadCachedRequestMetrics();
+
+    const today = todayDateString();
+    const isActive = !nextRequest.archived && !nextRequest.manuallyCompleted
+      && today >= nextRequest.startDate && today <= nextRequest.endDate;
+    if (isActive) {
+      await this.refreshRequestMetrics({ force: true });
+    } else {
+      await this.loadCachedRequestMetrics();
+    }
     this.store.addNotification('Goal saved.', 'Goal saved', 'success');
   }
 
@@ -116,6 +124,15 @@ export class QuestController {
     await this.persistRequests();
     await this.loadCachedRequestMetrics();
     this.store.addNotification('Goal deleted.', 'Goal deleted', 'success');
+  }
+
+  async completeRequest(requestId) {
+    const request = this.store.requests.find((item) => item.id === requestId);
+    if (!request) return;
+    const updated = new RequestModel({ ...request.toJSON(), manuallyCompleted: true });
+    this.store.upsertRequest(updated);
+    await this.persistRequests();
+    this.store.addNotification('Goal marked as complete.', 'Goal completed', 'success');
   }
 
   async refreshRequestMetrics({ force = false } = {}) {
