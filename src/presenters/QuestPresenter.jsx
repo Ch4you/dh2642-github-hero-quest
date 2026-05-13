@@ -167,8 +167,12 @@ const QuestPresenter = observer(function QuestPresenter() {
   }
 
   async function persistCurrentForm() {
+    const targetStatus = preview.status;
     setFormOpen(false);
     await quest.saveRequest(buildPayload());
+    if (targetStatus && targetStatus !== statusFilter) {
+      setStatusFilter(targetStatus);
+    }
   }
 
   async function saveRequestAndClose() {

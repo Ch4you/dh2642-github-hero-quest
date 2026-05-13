@@ -102,6 +102,15 @@ export class AppStore {
   setLastSyncedAt = (value) => this.workspace.setLastSyncedAt(value);
   clearSyncErrors = () => this.workspace.clearSyncErrors();
 
+  persistWorkspace = (owner) => this.workspace.persistWorkspace(owner);
+  persistUserProgress = (payload) => this.workspace.persistUserProgress(payload);
+  persistWeeklyUserProgress = (payload) => this.workspace.persistWeeklyUserProgress(payload);
+  persistScoreRules = (repoKey) => this.workspace.persistScoreRules(repoKey);
+  persistMergedPRDetails = (payload) => this.workspace.persistMergedPRDetails(payload);
+  persistRepositoryContributors = (payload) => this.workspace.persistRepositoryContributors(payload);
+  persistRequests = (payload) => this.requestsStore.persistRequests(payload);
+  persistRequestMetrics = (payload) => this.requestsStore.persistRequestMetrics(payload);
+
   setRequests = (requests) => this.requestsStore.setRequests(requests);
   upsertRequest = (request) => this.requestsStore.upsertRequest(request);
   removeRequest = (requestId) => this.requestsStore.removeRequest(requestId);

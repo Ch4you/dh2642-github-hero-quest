@@ -3,8 +3,6 @@ import { getRequestMetricValues } from '../services/githubApi.js';
 import {
   getRequestMetricsForRepo,
   isFirebaseConfigured,
-  saveRequestMetricsForRepo,
-  saveRequestsForRepo,
   subscribeRequestsForRepo,
 } from '../services/firebaseService.js';
 
@@ -70,12 +68,7 @@ export class QuestController {
   }
 
   async persistRequests() {
-    if (!isFirebaseConfigured() || !this.store.repoKeyString) return;
-    await saveRequestsForRepo({
-      repoKey: this.store.repoKeyString,
-      requests: this.store.requests.map((request) => request.toJSON()),
-      updatedBy: this.store.profile.username,
-    });
+    await this.store.persistRequests({ updatedBy: this.store.profile.username });
   }
 
   async saveRequest(payload) {
@@ -175,15 +168,7 @@ export class QuestController {
         },
       );
 
-      if (isFirebaseConfigured()) {
-        await saveRequestMetricsForRepo({
-          repoKey: this.store.repoKeyString,
-          username: this.store.profile.username,
-          valuesById: progress.valuesById,
-          contributionsById: progress.contributionsById,
-          syncedAtMs,
-        });
-      }
+      await this.store.persistRequestMetrics({ username: this.store.profile.username });
       return true;
     } catch (error) {
       this.store.addNotification(

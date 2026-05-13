@@ -1,6 +1,15 @@
 import { makeAutoObservable } from 'mobx';
 import { HeroModel } from '../models/HeroModel.js';
 import { DEFAULT_SCORE_RULES, normalizeScoreRules } from '../models/scoreRules.js';
+import {
+  isFirebaseConfigured,
+  saveWorkspace,
+  saveUserProgress,
+  saveUserData,
+  saveScoreRulesForRepo,
+  saveMergedPullRequestDetailsForRepo,
+  saveRepositoryContributorsForRepo,
+} from '../services/firebaseService.js';
 
 export function makeRepositoryKey({ owner, name } = {}) {
   if (!owner?.trim() || !name?.trim()) return '';
@@ -263,6 +272,58 @@ export class WorkspaceStore {
     this.lastSyncedAt = value || '';
   }
 
+  async persistWorkspace({ uid, username } = {}) {
+    if (!isFirebaseConfigured() || (!uid && !username)) return;
+    await saveWorkspace({
+      uid,
+      username,
+      repositories: this.repositories,
+      activeRepoKey: this.activeRepoKey,
+    });
+  }
+
+  async persistUserProgress({ username, displayName, syncedAtMs = Date.now() } = {}) {
+    if (!isFirebaseConfigured() || !this.repoKeyString || !username) return;
+    await saveUserProgress({
+      username,
+      repoKey: this.repoKeyString,
+      xp: this.hero.xp,
+      level: this.hero.level,
+      commits: this.hero.commits,
+      mergedPRs: this.hero.mergedPRs,
+      openPRs: this.hero.openPRs,
+      reviews: this.hero.reviews,
+      requestBonusXp: this.hero.questBonusXp,
+      allTimeSyncedAtMs: syncedAtMs,
+      displayName: displayName || username,
+    });
+    await saveUserData({
+      username,
+      displayName: displayName || username,
+      avatarUrl: this.root.session.profile.avatarUrl,
+      lastRepoKey: this.repoKeyString,
+    });
+  }
+
+  async persistWeeklyUserProgress(payload) {
+    if (!isFirebaseConfigured() || !this.repoKeyString) return;
+    await saveUserProgress({ repoKey: this.repoKeyString, ...payload });
+  }
+
+  async persistScoreRules(repoKey) {
+    if (!isFirebaseConfigured() || !repoKey) return;
+    await saveScoreRulesForRepo({ repoKey, scoreRules: this.scoreRules });
+  }
+
+  async persistMergedPRDetails({ repoKey, items, totalCount, syncedAtMs } = {}) {
+    if (!isFirebaseConfigured() || !repoKey) return;
+    await saveMergedPullRequestDetailsForRepo({ repoKey, items, totalCount, syncedAtMs });
+  }
+
+  async persistRepositoryContributors({ repoKey, items, syncedAtMs } = {}) {
+    if (!isFirebaseConfigured() || !repoKey) return;
+    await saveRepositoryContributorsForRepo({ repoKey, items, syncedAtMs });
+  }
 
   reset() {
     this.repo = { owner: '', name: '' };

@@ -3,14 +3,8 @@ import {
   getScoreRulesForRepo,
   getWorkspace,
   isFirebaseConfigured,
-  saveScoreRulesForRepo,
   getMergedPullRequestDetailsForRepo,
-  saveMergedPullRequestDetailsForRepo,
   getRepositoryContributorsForRepo,
-  saveRepositoryContributorsForRepo,
-  saveUserData,
-  saveWorkspace,
-  saveUserProgress,
 } from '../services/firebaseService.js';
 import { DEFAULT_SCORE_RULES, calculateXp, normalizeScoreRules } from '../models/scoreRules.js';
 
@@ -80,11 +74,7 @@ export class RepositoryController {
     if (!this.canPersistWorkspace()) return;
 
     try {
-      await saveWorkspace({
-        ...this.getWorkspaceOwner(),
-        repositories: this.store.repositories,
-        activeRepoKey: this.store.activeRepoKey,
-      });
+      await this.store.persistWorkspace(this.getWorkspaceOwner());
     } catch (error) {
       this.store.addNotification(
         `Workspace could not be saved: ${error?.message ?? 'unknown'}`,
@@ -284,9 +274,7 @@ export class RepositoryController {
     if (targetRepoKey === this.store.activeRepoKey) {
       this.store.setScoreRules(nextRules);
     }
-    if (isFirebaseConfigured() && targetRepoKey) {
-      await saveScoreRulesForRepo({ repoKey: targetRepoKey, scoreRules: nextRules });
-    }
+    await this.store.persistScoreRules(targetRepoKey);
     this.store.addNotification('XP rules saved.', 'XP rules saved', 'success');
   }
 
@@ -316,27 +304,10 @@ export class RepositoryController {
     this.store.setHeroActivity({ ...activity, questBonusXp: this.store.completedRequestBonusXp });
     this.store.setLastSyncedAt(new Date(syncedAtMs).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
 
-    if (!isFirebaseConfigured()) return;
-
-    await saveUserProgress({
-      username: this.store.profile.username,
-      repoKey: this.store.repoKeyString,
-      xp: this.store.hero.xp,
-      level: this.store.hero.level,
-      commits: this.store.hero.commits,
-      mergedPRs: this.store.hero.mergedPRs,
-      openPRs: this.store.hero.openPRs,
-      reviews: this.store.hero.reviews,
-      requestBonusXp: this.store.hero.questBonusXp,
-      allTimeSyncedAtMs: syncedAtMs,
-      displayName: this.store.profile.displayName || this.store.profile.username,
-    });
-
-    await saveUserData({
+    await this.store.persistUserProgress({
       username: this.store.profile.username,
       displayName: this.store.profile.displayName || this.store.profile.username,
-      avatarUrl: this.store.profile.avatarUrl,
-      lastRepoKey: this.store.repoKeyString,
+      syncedAtMs,
     });
   }
 
@@ -557,21 +528,18 @@ export class RepositoryController {
       );
       if (this.store.repoKeyString !== syncRepoKey) return false;
 
-      if (isFirebaseConfigured()) {
-        await saveUserProgress({
-          username: this.store.profile.username,
-          repoKey: this.store.repoKeyString,
-          displayName: this.store.profile.displayName || this.store.profile.username,
-          weeklyXp: calculateXp(weeklyStats.user, this.store.scoreRules),
-          weeklyCommits: weeklyStats.user.commits,
-          weeklyMergedPRs: weeklyStats.user.mergedPRs,
-          weeklyOpenPRs: weeklyStats.user.openPRs,
-          weeklyReviews: weeklyStats.user.reviews,
-          weeklyRangeStart: range.since,
-          weeklyRangeEnd: range.until,
-          weeklySyncedAtMs: Date.now(),
-        });
-      }
+      await this.store.persistWeeklyUserProgress({
+        username: this.store.profile.username,
+        displayName: this.store.profile.displayName || this.store.profile.username,
+        weeklyXp: calculateXp(weeklyStats.user, this.store.scoreRules),
+        weeklyCommits: weeklyStats.user.commits,
+        weeklyMergedPRs: weeklyStats.user.mergedPRs,
+        weeklyOpenPRs: weeklyStats.user.openPRs,
+        weeklyReviews: weeklyStats.user.reviews,
+        weeklyRangeStart: range.since,
+        weeklyRangeEnd: range.until,
+        weeklySyncedAtMs: Date.now(),
+      });
 
       this.store.setSyncStatus('synced');
       if (source === 'manual') {
@@ -672,13 +640,11 @@ export class RepositoryController {
       const syncedAtMs = Date.now();
       this.store.setRepositoryContributors(contributors, syncedAtMs);
 
-      if (isFirebaseConfigured()) {
-        await saveRepositoryContributorsForRepo({
-          repoKey: syncRepoKey,
-          items: contributors,
-          syncedAtMs,
-        });
-      }
+      await this.store.persistRepositoryContributors({
+        repoKey: syncRepoKey,
+        items: contributors,
+        syncedAtMs,
+      });
 
       return true;
     } catch (error) {
@@ -758,14 +724,12 @@ export class RepositoryController {
       const syncedAtMs = Date.now();
       this.applyMergedPullRequestDetails({ items, totalCount, syncedAtMs });
 
-      if (isFirebaseConfigured()) {
-        await saveMergedPullRequestDetailsForRepo({
-          repoKey: this.store.repoKeyString,
-          items,
-          totalCount,
-          syncedAtMs,
-        });
-      }
+      await this.store.persistMergedPRDetails({
+        repoKey: this.store.repoKeyString,
+        items,
+        totalCount,
+        syncedAtMs,
+      });
       return true;
     } catch (error) {
       this.applyGitHubRateLimitBackoff(error);

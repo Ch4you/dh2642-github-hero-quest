@@ -141,3 +141,6 @@ vite.config.ts.timestamp-*
 # Local IDE/AI assistant settings
 .claude/
 .idea/
+
+# CLAUDE.md
+CLAUDE.md

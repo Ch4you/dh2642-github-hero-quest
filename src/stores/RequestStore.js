@@ -1,5 +1,6 @@
 import { makeAutoObservable } from 'mobx';
 import { RequestModel } from '../models/QuestModel.js';
+import { isFirebaseConfigured, saveRequestsForRepo, saveRequestMetricsForRepo } from '../services/firebaseService.js';
 
 export class RequestStore {
   root;
@@ -111,6 +112,26 @@ export class RequestStore {
 
   setRequestUnsubscribe(unsubscribe) {
     this.requestUnsubscribe = typeof unsubscribe === 'function' ? unsubscribe : null;
+  }
+
+  async persistRequests({ updatedBy } = {}) {
+    if (!isFirebaseConfigured() || !this.root.repoKeyString) return;
+    await saveRequestsForRepo({
+      repoKey: this.root.repoKeyString,
+      requests: this.requests.map((request) => request.toJSON()),
+      updatedBy,
+    });
+  }
+
+  async persistRequestMetrics({ username } = {}) {
+    if (!isFirebaseConfigured() || !this.root.repoKeyString || !username) return;
+    await saveRequestMetricsForRepo({
+      repoKey: this.root.repoKeyString,
+      username,
+      valuesById: this.requestMetricsById,
+      contributionsById: this.requestContributionsById,
+      syncedAtMs: this.requestMetricsSyncedAtMs,
+    });
   }
 
   stopRequestSubscription() {
