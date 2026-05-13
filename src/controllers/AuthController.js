@@ -1,7 +1,5 @@
 import {
   isFirebaseConfigured,
-  saveAuthProfile,
-  saveUserData,
   signInWithGitHubPopup,
   signOutCurrentUser,
   subscribeAuthState,
@@ -18,26 +16,17 @@ export class AuthController {
 
     return subscribeAuthState((payload) => {
       if (!payload) {
-        try {
-          localStorage.removeItem('heroquest_github_login');
-        } catch {
-          return undefined;
-        } finally {
-          this.store.applySignedOut();
-        }
+        this.store.clearCachedUsername();
+        this.store.applySignedOut();
         return;
       }
 
       let { uid, username, displayName, avatarUrl } = payload;
       if (!username?.trim()) {
-        try {
-          const stored = localStorage.getItem('heroquest_github_login');
-          if (stored) {
-            username = stored;
-            void saveAuthProfile({ uid, username: stored, displayName: displayName || stored, avatarUrl });
-          }
-        } catch {
-          username = '';
+        const stored = this.store.readCachedUsername();
+        if (stored) {
+          username = stored;
+          void this.store.persistMissingUsernameProfile({ uid, username: stored, displayName: displayName || stored, avatarUrl });
         }
       }
 
@@ -62,9 +51,7 @@ export class AuthController {
       throw new Error('GitHub account login succeeded but username was missing.');
     }
 
-    try {
-      localStorage.setItem('heroquest_github_login', username);
-    } catch {
+    if (!this.store.cacheUsername(username)) {
       this.store.addNotification('Local sign-in cache could not be written.', 'Sign-in warning');
     }
 
@@ -81,17 +68,11 @@ export class AuthController {
 
     onPhase?.('Saving your profile...');
     try {
-      await saveAuthProfile({
+      await this.store.persistAuthProfile({
         uid: authData.uid,
         username,
         displayName: authData.displayName || username,
         avatarUrl: authData.avatarUrl || '',
-      });
-      await saveUserData({
-        username,
-        displayName: authData.displayName || username,
-        avatarUrl: authData.avatarUrl || '',
-        uid: authData.uid || '',
         email: authData.email || '',
       });
       await this.repositoryController?.restoreWorkspace({ silent: true });
@@ -111,9 +92,7 @@ export class AuthController {
     } catch (error) {
       this.store.addNotification(`Sign-out warning: ${error?.message ?? 'unknown'}`, 'Sign-out warning', 'error');
     } finally {
-      try {
-        localStorage.removeItem('heroquest_github_login');
-      } catch {
+      if (!this.store.clearCachedUsername()) {
         this.store.addNotification('Local sign-in cache could not be cleared.', 'Sign-out warning');
       }
       this.store.applySignedOut();

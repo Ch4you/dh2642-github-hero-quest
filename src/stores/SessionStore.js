@@ -1,4 +1,5 @@
 import { makeAutoObservable } from 'mobx';
+import { isFirebaseConfigured, saveAuthProfile, saveUserData } from '../services/firebaseService.js';
 
 export class SessionStore {
   root;
@@ -23,6 +24,60 @@ export class SessionStore {
       uid: uid || '',
     };
     if (this.root.ui.step === 'login') this.root.ui.step = 'connect';
+  }
+
+
+
+  readCachedUsername() {
+    try {
+      return localStorage.getItem('heroquest_github_login') || '';
+    } catch {
+      return '';
+    }
+  }
+
+  cacheUsername(username) {
+    try {
+      localStorage.setItem('heroquest_github_login', username || '');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  clearCachedUsername() {
+    try {
+      localStorage.removeItem('heroquest_github_login');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async persistAuthProfile({ uid, username, displayName, avatarUrl, email } = {}) {
+    const cleanUsername = username?.trim();
+    if (!isFirebaseConfigured() || !cleanUsername) return;
+
+    await saveAuthProfile({
+      uid: uid || '',
+      username: cleanUsername,
+      displayName: displayName || cleanUsername,
+      avatarUrl: avatarUrl || '',
+    });
+
+    await saveUserData({
+      username: cleanUsername,
+      displayName: displayName || cleanUsername,
+      avatarUrl: avatarUrl || '',
+      uid: uid || '',
+      email: email || '',
+    });
+  }
+
+  async persistMissingUsernameProfile({ uid, username, displayName, avatarUrl } = {}) {
+    const cleanUsername = username?.trim();
+    if (!isFirebaseConfigured() || !cleanUsername) return;
+    await saveAuthProfile({ uid: uid || '', username: cleanUsername, displayName: displayName || cleanUsername, avatarUrl: avatarUrl || '' });
   }
 
   get profileInitials() {

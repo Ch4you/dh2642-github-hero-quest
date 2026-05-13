@@ -310,9 +310,9 @@ export class WorkspaceStore {
     await saveUserProgress({ repoKey: this.repoKeyString, ...payload });
   }
 
-  async persistScoreRules(repoKey) {
+  async persistScoreRules(repoKey, rules = this.scoreRules) {
     if (!isFirebaseConfigured() || !repoKey) return;
-    await saveScoreRulesForRepo({ repoKey, scoreRules: this.scoreRules });
+    await saveScoreRulesForRepo({ repoKey, scoreRules: normalizeScoreRules(rules) });
   }
 
   async persistMergedPRDetails({ repoKey, items, totalCount, syncedAtMs } = {}) {

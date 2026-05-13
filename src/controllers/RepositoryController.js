@@ -274,7 +274,7 @@ export class RepositoryController {
     if (targetRepoKey === this.store.activeRepoKey) {
       this.store.setScoreRules(nextRules);
     }
-    await this.store.persistScoreRules(targetRepoKey);
+    await this.store.persistScoreRules(targetRepoKey, nextRules);
     this.store.addNotification('XP rules saved.', 'XP rules saved', 'success');
   }
 

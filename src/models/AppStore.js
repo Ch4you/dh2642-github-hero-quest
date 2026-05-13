@@ -79,6 +79,11 @@ export class AppStore {
 
   setProfileUsername = (username) => this.session.setProfileUsername(username);
   hydrateFromSession = (payload) => this.session.hydrateFromSession(payload);
+  readCachedUsername = () => this.session.readCachedUsername();
+  cacheUsername = (username) => this.session.cacheUsername(username);
+  clearCachedUsername = () => this.session.clearCachedUsername();
+  persistAuthProfile = (payload) => this.session.persistAuthProfile(payload);
+  persistMissingUsernameProfile = (payload) => this.session.persistMissingUsernameProfile(payload);
 
   hydrateWorkspace = (payload) => this.workspace.hydrateWorkspace(payload);
   setRepositoryInput = (value) => this.workspace.setRepositoryInput(value);
@@ -105,7 +110,7 @@ export class AppStore {
   persistWorkspace = (owner) => this.workspace.persistWorkspace(owner);
   persistUserProgress = (payload) => this.workspace.persistUserProgress(payload);
   persistWeeklyUserProgress = (payload) => this.workspace.persistWeeklyUserProgress(payload);
-  persistScoreRules = (repoKey) => this.workspace.persistScoreRules(repoKey);
+  persistScoreRules = (repoKey, rules) => this.workspace.persistScoreRules(repoKey, rules);
   persistMergedPRDetails = (payload) => this.workspace.persistMergedPRDetails(payload);
   persistRepositoryContributors = (payload) => this.workspace.persistRepositoryContributors(payload);
   persistRequests = (payload) => this.requestsStore.persistRequests(payload);
