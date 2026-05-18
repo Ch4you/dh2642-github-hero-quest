@@ -314,7 +314,7 @@ This keeps the application state side effects inside the state manager while the
 
 ## User Feedback & Usability Evaluation
 
-We conducted user feedback sessions with target users who have experience with GitHub repositories and collaborative development.
+We conducted user feedback sessions with target users who have experience with GitHub repositories and collaborative development. More details can be found at under the docs directory. Here are some examples:
 
 ### Main issues identified
 

@@ -158,6 +158,13 @@
       font-weight: 500;
       margin-right: 4px;
     }
+    .flexBox{
+      display: flex;
+
+      .section-number{
+        margin-right: 8px;
+      }
+    }
 
     @media print {
       body { background: #fff; padding: 0; }
@@ -177,8 +184,14 @@
     </div>
 
     <div class="section">
-      <div class="section-number">1</div>
-      <h2>Sign in with GitHub</h2>
+      <div class="flexBox">
+        <div class="section-number">1</div>
+        <h2>Sign in with GitHub</h2>
+      </div>
+      <div class="flexBox">
+        
+      </div>
+     
       <p>GitHub Hero Quest uses GitHub OAuth for authentication. No password is stored — your GitHub account is used directly.</p>
       <ol class="steps">
         <li><span class="step-num">1</span>Open the app and click <strong>Sign in with GitHub</strong> on the welcome screen.</li>
@@ -190,8 +203,11 @@
     </div>
 
     <div class="section">
-      <div class="section-number">2</div>
+      <div class="flexBox">
+        <div class="section-number">2</div>
       <h2>Complete Your Profile</h2>
+      </div>
+      
       <p>On first sign-in you will be asked to confirm your GitHub username. This lets the app map repository commits, PRs, and reviews to your account.</p>
       <ol class="steps">
         <li><span class="step-num">1</span>Enter your GitHub username in the input field (e.g. <code>octocat</code>).</li>
@@ -201,8 +217,11 @@
     </div>
 
     <div class="section">
-      <div class="section-number">3</div>
+      <div class="flexBox">
+        <div class="section-number">3</div>
       <h2>Connect a GitHub Repository</h2>
+      </div>
+      
       <p>After signing in, connect a public GitHub repository to start tracking activity.</p>
       <ol class="steps">
         <li><span class="step-num">1</span>Click <strong>Workspace</strong> in the left sidebar (or bottom nav on mobile).</li>
@@ -215,8 +234,11 @@
     </div>
 
     <div class="section">
-      <div class="section-number">4</div>
+      <div class="flexBox">
+         <div class="section-number">4</div>
       <h2>Create and Manage Goals</h2>
+      </div>
+     
       <p>Goals (Quests) let your team set measurable targets for repository activity within a date range.</p>
       <ol class="steps">
         <li><span class="step-num">1</span>Click <strong>Manage goals</strong> in the left sidebar.</li>
@@ -231,8 +253,11 @@
     </div>
 
     <div class="section">
-      <div class="section-number">5</div>
+      <div class="flexBox">
+        <div class="section-number">5</div>
       <h2>Dashboard and Leaderboard</h2>
+      </div>
+      
       <p>The Dashboard gives you a personal overview of your activity. The Leaderboard shows how the whole team compares.</p>
       <ol class="steps">
         <li><span class="step-num">1</span>Click <strong>Dashboard</strong> in the sidebar to see your XP, synced teammates, active goals, and merged pull requests.</li>
